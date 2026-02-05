@@ -1,0 +1,94 @@
+# Canon Rules for cc-recommender Project
+
+## 🛡️ Safety First - Always Reversible
+
+**CRITICAL**: The user has zero coding knowledge and relies entirely on AI assistance. Every change must be:
+1. **Reversible** - Always commit changes before making modifications
+2. **Explainable** - Explain what you're doing in simple, non-technical terms
+3. **Testable** - Verify changes work before considering them complete
+4. **Backed up** - Use git commits as checkpoints
+
+## 📋 Git Workflow - Safety Net
+
+### Before Making ANY Changes:
+1. **Check current status**: `git status` to see what's changed
+2. **Commit existing work**: If there are uncommitted changes, commit them first with a clear message
+3. **Create a branch** (optional but recommended): `git checkout -b feature/description` for major changes
+4. **Make changes incrementally**: Small, testable changes are safer than large refactors
+
+### After Making Changes:
+1. **Test the changes**: Run the app and verify it works (`npm run dev`)
+2. **Review what changed**: `git diff` to see exactly what was modified
+3. **Commit with clear messages**: Use descriptive commit messages like "Add feature X" or "Fix bug Y"
+4. **Explain to user**: Tell them what changed and why, in simple terms
+
+### If Something Goes Wrong:
+- **Revert immediately**: `git restore <file>` to undo changes to a file
+- **Or reset to last commit**: `git reset --hard HEAD` (use with caution - explains risks first)
+- **Or checkout previous commit**: `git checkout <commit-hash>` to go back in time
+
+## 🎯 Communication Guidelines
+
+### When Talking to the User:
+- **No jargon**: Avoid technical terms without explanation
+- **Use analogies**: Compare coding concepts to everyday things
+- **Show, don't just tell**: When possible, show what changed visually
+- **Ask before major changes**: For significant refactors, explain the plan first
+- **Explain the "why"**: Don't just say what you're doing, explain why it helps
+
+### Example Good Explanations:
+- ❌ "I'm refactoring the component to use hooks"
+- ✅ "I'm updating the code to make it easier to maintain and fix bugs. Think of it like reorganizing a filing cabinet - same stuff, but easier to find things later."
+
+## 🔧 Code Standards
+
+### TypeScript/React Best Practices:
+- Use TypeScript types properly - catch errors before they happen
+- Keep components focused - one component, one job
+- Use meaningful variable names - `userAnswers` not `data`
+- Add comments for complex logic - explain the "why" not the "what"
+- Handle errors gracefully - never let the app crash silently
+
+### File Organization:
+- Keep related code together
+- Don't create unnecessary files
+- Follow existing patterns in the codebase
+- When in doubt, ask the user or explain your approach
+
+## 🚨 Red Flags - Stop and Ask
+
+**STOP and explain before:**
+- Deleting files (unless explicitly requested)
+- Changing file structure significantly
+- Updating dependencies/package.json
+- Modifying git history
+- Making breaking changes to existing features
+- Adding new dependencies
+
+## 📝 Change Documentation
+
+When making changes:
+1. **What**: What did you change?
+2. **Why**: Why was this change needed?
+3. **How to test**: How can the user verify it works?
+4. **How to revert**: What command to undo if needed?
+
+## 🎓 Teaching Moments
+
+When appropriate, explain:
+- What the code does in simple terms
+- Why we're doing it this way
+- What could go wrong and how we prevent it
+- How to recognize similar patterns in the future
+
+## 🔄 Revert Strategy
+
+Always provide a clear revert path:
+- For single file: `git restore app/wizard/page.tsx`
+- For all changes: `git reset --hard HEAD`
+- For specific commit: `git revert <commit-hash>`
+- Show git log: `git log --oneline` to find commit to revert to
+
+---
+
+**Remember**: The user trusts you completely. Earn that trust by being careful, clear, and always providing a way back.
