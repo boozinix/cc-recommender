@@ -45,15 +45,6 @@ const questions = [
       { value: "Medium", label: "Up to $5,000" },
       { value: "High", label: "Above $5,000" }
     ]
-  },
-  {
-    id: "travel_frequency",
-    question: "How often do you travel?",
-    options: [
-      { value: "Low", label: "Rarely" },
-      { value: "Medium", label: "A few times a year" },
-      { value: "High", label: "Frequently" }
-    ]
   }
 ];
 

@@ -21,7 +21,8 @@ type Card = {
   card_type: string;
   annual_fee: string;
   reward_model: string;
-  card_family: string;            // matches CSV header
+  card_family: string;
+  cashback_rate_display?: string;
   cashback_rate_effective: string;
   estimated_bonus_value_usd: string;
   intro_apr_purchase: string;
@@ -65,12 +66,12 @@ function getIssuerStyle(issuer: string) {
 
 
 
-function getGoalRanks(answers: Answers): { primary?: string; secondary?: string } {
+function getGoalRanks(answers: Answers): { primary?: string; secondary?: string; tertiary?: string } {
   if (Array.isArray(answers.primary_goal_ranked)) {
-    const [first, second] = answers.primary_goal_ranked;
-    return { primary: first, secondary: second };
+    const [first, second, third] = answers.primary_goal_ranked;
+    return { primary: first, secondary: second, tertiary: third };
   }
-  return { primary: answers.primary_goal, secondary: undefined };
+  return { primary: answers.primary_goal, secondary: undefined, tertiary: undefined };
 }
 
 
@@ -78,57 +79,138 @@ function getGoalRanks(answers: Answers): { primary?: string; secondary?: string 
 
 
 // =========================================================
+// Initial Questionnaire (mirrors wizard Q1–Q3 for display)
+// =========================================================
+const initialQuestions = [
+  {
+    id: "primary_goal",
+    question: "Rank what you want this card to be best at",
+    options: [
+      { value: "Cashback", label: "💰 Cashback" },
+      { value: "Travel", label: "✈️ Travel rewards" },
+      { value: "Bonus", label: "🎁 Signup bonus" },
+      { value: "Everyday", label: "🧾 Everyday spending" }
+    ]
+  },
+  {
+    id: "annual_fee_tolerance",
+    question: "How do you feel about annual fees?",
+    options: [
+      { value: "None", label: "❌ No annual fee" },
+      { value: "Low", label: "🙂 Up to $100" },
+      { value: "Medium", label: "😐 $100–$400" },
+      { value: "High", label: "😎 Doesn't matter" }
+    ]
+  },
+  {
+    id: "spend_comfort",
+    question: "How comfortable are you meeting an initial spending requirement to earn a sign-up bonus?",
+    options: [
+      { value: "None", label: "Don't want a bonus" },
+      { value: "Low", label: "Under $1,000" },
+      { value: "Medium", label: "Up to $5,000" },
+      { value: "High", label: "Above $5,000" }
+    ]
+  }
+];
+
+function getInitialAnswerDisplay(questionId: string, answerValue: unknown): string {
+  const q = initialQuestions.find(x => x.id === questionId);
+  if (!q) return "";
+  if (questionId === "primary_goal" && Array.isArray(answerValue)) {
+    const top2 = answerValue.slice(0, 2);
+    return top2.map((val: string, idx: number) => {
+      const opt = q.options.find(o => o.value === val);
+      return `${idx + 1}. ${opt?.label || val}`;
+    }).join(" • ");
+  }
+  const opt = q.options.find(o => o.value === answerValue);
+  return opt?.label || String(answerValue ?? "");
+}
+
+// =========================================================
 // Refinement Questions Config
 // =========================================================
+// Same schema as wizard: id, question, optional helper, options: { value, label }[]
 const refinementQuestions = [
   {
     id: "cards_24mo",
-    label: "How many credit cards have you opened in the last 24 months?",
+    question: "How many credit cards have you opened in the last 24 months?",
     dependsOn: () => true,
-    options: ["0–4", "5", "6", "7+"]
+    options: [
+      { value: "0–4", label: "0–4" },
+      { value: "5", label: "5" },
+      { value: "6", label: "6" },
+      { value: "7+", label: "7+" }
+    ]
   },
   {
     id: "travel_rewards_type",
-    label: "What kind of travel rewards do you prefer?",
+    question: "What kind of travel rewards do you prefer?",
     dependsOn: (answers: Answers) => {
       const { primary } = getGoalRanks(answers);
       return primary === "Travel";
     },
-    options: ["Generic / flexible travel", "Airline-specific", "Hotel-specific"]
+    options: [
+      { value: "General", label: "General" },
+      { value: "Airline", label: "Airline" },
+      { value: "Hotel", label: "Hotel" }
+    ]
   },
   {
     id: "preferred_airline",
-    label: "Which airline do you usually fly?",
+    question: "Which airline do you usually fly?",
     dependsOn: (answers: Answers) =>
-      answers.travel_rewards_type === "Airline-specific",
+      answers.travel_rewards_type === "Airline",
     options: [
-      "United",
-      "Delta",
-      "American",
-      "Alaska",
-      "JetBlue",
-      "Southwest",
-      "No strong preference"
+      { value: "United", label: "United" },
+      { value: "Delta", label: "Delta" },
+      { value: "American", label: "American" },
+      { value: "Alaska", label: "Alaska" },
+      { value: "JetBlue", label: "JetBlue" },
+      { value: "Southwest", label: "Southwest" },
+      { value: "No strong preference", label: "No strong preference" }
     ]
   },
   {
     id: "preferred_hotel",
-    label: "Which hotel brand do you prefer?",
+    question: "Which hotel brand do you prefer?",
     dependsOn: (answers: Answers) =>
-      answers.travel_rewards_type === "Hotel-specific",
-    options: ["Marriott", "Hilton", "Hyatt", "IHG", "No strong preference"]
+      answers.travel_rewards_type === "Hotel",
+    options: [
+      { value: "Marriott", label: "Marriott" },
+      { value: "Hilton", label: "Hilton" },
+      { value: "Hyatt", label: "Hyatt" },
+      { value: "IHG", label: "IHG" },
+      { value: "No strong preference", label: "No strong preference" }
+    ]
+  },
+  {
+    id: "travel_tier_preference",
+    question: "Do you prefer a premium or mid-tier travel card?",
+    helper: "Premium cards offer stronger benefits with higher annual fees; mid-tier cards have lower fees and solid rewards.",
+    dependsOn: (answers: Answers) => {
+      const { primary } = getGoalRanks(answers);
+      return primary === "Travel";
+    },
+    options: [
+      { value: "Premium", label: "Premium" },
+      { value: "Mid-tier", label: "Mid-tier" },
+      { value: "No preference", label: "No preference" }
+    ]
   },
   {
     id: "needs_0_apr",
-    label: "Do you need a 0% intro APR?",
+    question: "Do you need a 0% intro APR?",
+    helper: "We’ll prioritize cards with 0% intro APR when this matters to you.",
     dependsOn: (answers: Answers) => {
       const { primary } = getGoalRanks(answers);
       return primary === "Everyday" || primary === "Cashback";
     },
     options: [
-      "Yes, I plan to carry a balance",
-      "No, I pay in full",
-      "Doesn't matter"
+      { value: "Yes, I plan to carry a balance", label: "Yes, I plan to carry a balance" },
+      { value: "No, I pay in full", label: "No, I pay in full" },
+      { value: "Doesn't matter", label: "Doesn't matter" }
     ]
   }
 ];
@@ -177,7 +259,81 @@ function formatBonusDisplay(card: Card) {
   return `Worth $${value.toLocaleString()} estimated value in ${typeLabel}`;
 }
 
+/** Human-readable label for reward_model (travel, cashback, airline, hotel, etc.) */
+/** All airline/hotel cards display as Travel. */
+function getRewardModelLabel(rewardModel: string): string {
+  const r = (rewardModel || "").toLowerCase();
+  if (r === "travel" || r === "airline" || r === "hotel") return "Travel";
+  if (r === "cashback") return "Cashback";
+  if (r === "balance_transfer") return "Balance transfer";
+  if (r === "credit_building") return "Credit building";
+  return rewardModel ? rewardModel.charAt(0).toUpperCase() + rewardModel.slice(1) : "";
+}
 
+/** Cashback rate for display: prefer display string (e.g. "5/3/1"), else effective as % */
+function getCashbackDisplay(card: Card): string | null {
+  const display = card.cashback_rate_display?.trim();
+  if (display) return display;
+  const effective = card.cashback_rate_effective?.trim();
+  if (effective && parseFloat(effective) > 0) return `${effective}%`;
+  return null;
+}
+
+/** Match airline by card_family or card_name (e.g. American = family "American"; Alaska = family "Alaska" or name "Alaska") */
+function cardMatchesAirline(card: Card, airline: string): boolean {
+  if (!airline || airline === "No strong preference") return false;
+  const key = airline.trim().toLowerCase();
+  const family = (card.card_family || "").trim().toLowerCase();
+  const name = (card.card_name || "").toLowerCase();
+  return family.includes(key) || name.includes(key);
+}
+
+/** Match hotel by card_family or card_name */
+function cardMatchesHotel(card: Card, hotel: string): boolean {
+  if (!hotel || hotel === "No strong preference") return false;
+  const key = hotel.trim().toLowerCase();
+  const family = (card.card_family || "").trim().toLowerCase();
+  const name = (card.card_name || "").toLowerCase();
+  return family.includes(key) || name.includes(key);
+}
+
+/** True if card is premium tier within its family (e.g. Reserve vs Preferred, Venture X vs Venture, Amex Platinum vs Gold). */
+function isPremiumTierCard(card: Card): boolean {
+  const name = (card.card_name || "").toLowerCase();
+  const fee = parseInt(card.annual_fee || "0", 10);
+  const premiumNames = [
+    "reserve", "venture x", "platinum", "infinite", "aspire", "brilliant",
+    "performance", "premier", "club infinite", "club business"
+  ];
+  if (premiumNames.some(p => name.includes(p))) return true;
+  if (fee >= 395) return true; // Venture X / Reserve tier and above
+  return false;
+}
+
+/** True if card is generic travel (Sapphire, Venture, Amex MR) rather than airline/hotel co-brand. */
+function isGenericTravelCard(card: Card): boolean {
+  return (card.reward_model || "").toLowerCase() === "travel";
+}
+
+/** Very premium travel: Sapphire Reserve, Amex Platinum, Venture X (higher fees, best benefits). */
+function isVeryPremiumTravelCard(card: Card): boolean {
+  const name = (card.card_name || "").toLowerCase();
+  const issuer = (card.issuer || "").toLowerCase();
+  if (name.includes("sapphire reserve")) return true;
+  if (name.includes("venture x")) return true;
+  if (issuer === "amex" && name.includes("platinum") && !name.includes("delta")) return true;
+  return false;
+}
+
+/** Premium (mid-tier) travel: Sapphire Preferred, Amex Gold, Venture (not X). */
+function isMidTierTravelCard(card: Card): boolean {
+  const name = (card.card_name || "").toLowerCase();
+  const issuer = (card.issuer || "").toLowerCase();
+  if (name.includes("sapphire preferred")) return true;
+  if (name.includes("venture") && !name.includes("venture x")) return true;
+  if (issuer === "amex" && name.includes("gold") && !name.includes("delta")) return true;
+  return false;
+}
 
 /**
  * De-duplicate cards by card_family: keep the highest-score card per family.
@@ -245,12 +401,14 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
   if (ownedCards.includes(card.card_name)) return -9999;
   if (issuerExcluded(card.issuer, answers.cards_24mo)) return -9999;
 
-  const { primary, secondary } = getGoalRanks(answers);
+  const { primary, secondary, tertiary } = getGoalRanks(answers);
   const cardFee = parseInt(card.annual_fee || "0", 10);
   const bonusValue = parseInt(card.estimated_bonus_value_usd || "0", 10);
   const cashbackRate = parseFloat(card.cashback_rate_effective || "0");
-  const isTravelCard = card.reward_model.toLowerCase() === "travel";
-  const isCashbackCard = card.reward_model.toLowerCase() === "cashback";
+  const rewardModel = card.reward_model.toLowerCase();
+  // Travel cards = travel, airline, hotel (all display for Travel goal)
+  const isTravelCard = rewardModel === "travel" || rewardModel === "airline" || rewardModel === "hotel";
+  const isCashbackCard = rewardModel === "cashback";
 
   let score = 0;
 
@@ -262,7 +420,6 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
     primary !== "Travel"
   ) {
     if (!hasIntroAPR(card)) return -9999;
-    // For 0% APR seekers, prioritize cashback rate and low/no fees
     score += cashbackRate * 10;
     score -= cardFee / 10;
     return score;
@@ -273,44 +430,54 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
   // =========================================================
   const feeTolerance = answers.annual_fee_tolerance;
   if (feeTolerance === "None" && cardFee > 0) {
-    // User wants no fee - heavily penalize cards with fees
     score -= 50;
   } else if (feeTolerance === "Low" && cardFee > 100) {
-    // User wants low fee - penalize cards over $100
     score -= 30;
   } else if (feeTolerance === "Medium" && cardFee > 400) {
-    // User wants medium fee - penalize cards over $400
     score -= 30;
   }
-  // "High" tolerance means no penalty
 
   // =========================================================
-  // STEP 4: Primary Goal Scoring (Highest Weight)
+  // STEP 3b: Tier awareness (premium vs mid within same family)
   // =========================================================
+  const isPremium = isPremiumTierCard(card);
+  if (feeTolerance === "High" || feeTolerance === "Medium") {
+    if (isPremium) score += 20; // Prefer Reserve, Venture X, Platinum when OK with fees
+  } else if (feeTolerance === "None" || feeTolerance === "Low") {
+    if (isPremium) score -= 15; // Don't push $400+ cards to no-fee / low-fee seekers
+  }
+
+  // =========================================================
+  // STEP 4: Primary Goal Scoring (key metric per goal)
+  // =========================================================
+
   if (primary === "Travel") {
+    // High priority: travel cards should be displayed
     if (isTravelCard) {
-      score += 60;
-      // Boost for travel frequency
+      score += 80; // Strong base so travel cards rise to top
       if (answers.travel_frequency === "High") score += 15;
       else if (answers.travel_frequency === "Medium") score += 8;
-      else if (answers.travel_frequency === "Low") score -= 10; // Penalize if rarely travel
+      else if (answers.travel_frequency === "Low") score -= 10;
     } else {
-      score -= 25; // Penalize non-travel cards
+      score -= 40; // Heavy penalty so non-travel cards don't crowd results
     }
   } else if (primary === "Cashback") {
+    // Key metric: effective cashback rate
     if (isCashbackCard) {
-      score += 40;
+      score += 50; // Base for being cashback
     }
-    // No penalty for non-cashback if not primary
+    score += cashbackRate * 25; // Effective rate is the key number
   } else if (primary === "Everyday") {
-    // Everyday spending = prioritize cashback rate
-    score += cashbackRate * 8;
+    // Mixture of cashback rate and 0% APR
+    score += cashbackRate * 15; // Cashback rate matters
+    if (hasIntroAPR(card)) {
+      score += 35; // 0% APR is important for everyday spending
+    }
   } else if (primary === "Bonus") {
-    // Only prioritize bonus if user is comfortable with spending
+    // Most important metric: bonus value
     if (answers.spend_comfort !== "None") {
-      score += Math.min(bonusValue / 50, 40);
+      score += Math.min(bonusValue / 25, 80); // Bonus value is key (strong weight)
     } else {
-      // User doesn't want bonus - penalize bonus-focused cards
       score -= 20;
     }
   }
@@ -320,46 +487,77 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
   // =========================================================
   if (secondary === "Travel") {
     if (isTravelCard) {
-      score += 25;
-      // Smaller boost for travel frequency
+      score += 30;
       if (answers.travel_frequency === "High") score += 8;
       else if (answers.travel_frequency === "Low") score -= 5;
     } else {
-      score -= 10;
+      score -= 15;
     }
   } else if (secondary === "Cashback") {
-    if (isCashbackCard) {
-      score += 15;
-    }
+    if (isCashbackCard) score += 15;
+    score += cashbackRate * 5;
   } else if (secondary === "Everyday") {
-    score += cashbackRate * 3;
+    score += cashbackRate * 4;
+    if (hasIntroAPR(card)) score += 10;
   } else if (secondary === "Bonus") {
     if (answers.spend_comfort !== "None") {
-      score += Math.min(bonusValue / 100, 15);
+      score += Math.min(bonusValue / 80, 15);
+    }
+  }
+
+  // =========================================================
+  // STEP 5b: Tertiary Goal Scoring (Low Weight - 3rd rank)
+  // =========================================================
+  if (tertiary === "Travel") {
+    if (isTravelCard) {
+      score += 12;
+      if (answers.travel_frequency === "High") score += 3;
+    } else {
+      score -= 5;
+    }
+  } else if (tertiary === "Cashback") {
+    if (isCashbackCard) score += 8;
+    score += cashbackRate * 2;
+  } else if (tertiary === "Everyday") {
+    score += cashbackRate * 2;
+    if (hasIntroAPR(card)) score += 5;
+  } else if (tertiary === "Bonus") {
+    if (answers.spend_comfort !== "None") {
+      score += Math.min(bonusValue / 150, 8);
     }
   }
 
   // =========================================================
   // STEP 6: Travel-Specific Preferences
   // =========================================================
-  const caresAboutTravel = primary === "Travel" || secondary === "Travel";
-  
+  const caresAboutTravel = primary === "Travel" || secondary === "Travel" || tertiary === "Travel";
+  const wantsGenericTravel =
+    answers.travel_rewards_type === "General" ||
+    !answers.travel_rewards_type;
+
   if (caresAboutTravel) {
-    // Airline preference matching
-    if (
-      answers.preferred_airline &&
-      answers.preferred_airline !== "No strong preference" &&
-      card.card_name.includes(answers.preferred_airline)
-    ) {
+    // When user wants generic/flexible travel, boost Sapphire, Venture, Amex (not airline/hotel co-brands)
+    if (wantsGenericTravel && isGenericTravelCard(card)) {
+      score += 30; // So Chase Sapphire, Capital One Venture, Amex MR cards show up
+    }
+
+    // Travel tier: Premium vs Mid-tier (use both named cards and fee so airline/hotel co-brands are covered)
+    const tierPref = answers.travel_tier_preference;
+    if (tierPref === "Premium") {
+      if (isVeryPremiumTravelCard(card)) score += 35; // Reserve, Platinum, Venture X
+      else if (isTravelCard && cardFee >= 350) score += 25; // e.g. Atmos Summit, other premium co-brands
+    } else if (tierPref === "Mid-tier") {
+      if (isMidTierTravelCard(card)) score += 35; // Preferred, Gold, Venture
+      else if (isTravelCard && cardFee >= 300) score -= 35; // penalize high-fee cards (e.g. Atmos Summit $395)
+    }
+
+    // Airline preference matching (by card_family or card_name: American, Alaska, etc.)
+    if (cardMatchesAirline(card, answers.preferred_airline)) {
       score += 40;
     }
 
-    // Hotel preference matching
-    if (
-      answers.preferred_hotel &&
-      answers.preferred_hotel !== "No strong preference" &&
-      card.card_name.includes(answers.preferred_hotel)
-    ) {
+    // Hotel preference matching (by card_family or card_name)
+    if (cardMatchesHotel(card, answers.preferred_hotel)) {
       score += 40;
     }
   }
@@ -449,12 +647,12 @@ export default function ResultsPage() {
     let finalCards: Card[] = [];
 
     const wantsAirlineBrand =
-      answers.travel_rewards_type === "Airline-specific" &&
+      answers.travel_rewards_type === "Airline" &&
       answers.preferred_airline &&
       answers.preferred_airline !== "No strong preference";
 
     const wantsHotelBrand =
-      answers.travel_rewards_type === "Hotel-specific" &&
+      answers.travel_rewards_type === "Hotel" &&
       answers.preferred_hotel &&
       answers.preferred_hotel !== "No strong preference";
 
@@ -499,17 +697,22 @@ export default function ResultsPage() {
 
 
   // ---------------------
-  // Other Card Type Ranking (Top 3) — family de-duplication
+  // Other Card Type Ranking (Top 3) — same scoring + same brand priority as main list
   // ---------------------
+  const wantsAirlineBrand =
+    answers.travel_rewards_type === "Airline" &&
+    answers.preferred_airline &&
+    answers.preferred_airline !== "No strong preference";
+  const wantsHotelBrand =
+    answers.travel_rewards_type === "Hotel" &&
+    answers.preferred_hotel &&
+    answers.preferred_hotel !== "No strong preference";
+
   const otherTypeCards = useMemo(() => {
     if (!answers.card_mode) return [];
 
-
-
     const otherType =
       answers.card_mode === "personal" ? "business" : "personal";
-
-
 
     const scoredRaw = [...cards]
       .filter(c => c.card_type === otherType)
@@ -519,15 +722,37 @@ export default function ResultsPage() {
       }))
       .filter(x => x.score > -9999);
 
+    if (wantsAirlineBrand || wantsHotelBrand) {
+      const brand = wantsAirlineBrand
+        ? answers.preferred_airline
+        : answers.preferred_hotel;
+      const brandKey = brand.trim().toLowerCase();
+
+      const brandCards = scoredRaw
+        .filter(x => (x.card.card_family || "").toLowerCase().includes(brandKey))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 2);
+
+      const nonBrandCards = scoredRaw.filter(x =>
+        !(x.card.card_family || "").toLowerCase().includes(brandKey)
+      );
+      const generalCards = dedupeByFamily(nonBrandCards)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 1);
+
+      return [
+        ...brandCards.map(x => x.card),
+        ...generalCards.map(x => x.card)
+      ].slice(0, 3);
+    }
 
     const deduped = dedupeByFamily(scoredRaw)
       .sort((a, b) => b.score - a.score)
       .slice(0, 3)
       .map(x => x.card);
 
-
     return deduped;
-  }, [cards, answers, ownedCards]);
+  }, [cards, answers, ownedCards, wantsAirlineBrand, wantsHotelBrand]);
 
 
 
@@ -584,25 +809,52 @@ export default function ResultsPage() {
       {/* LEFT PANEL */}
       <div style={{ background: "#ffffff", borderRadius: 12, padding: 20 }}>
 
-
-
-        {/* BACK BUTTON */}
-        <button
-          onClick={() => (window.location.href = "/wizard")}
-          style={{
-            marginBottom: 20,
-            padding: "8px 14px",
-            borderRadius: 999,
-            border: "1px solid #c7d2fe",
-            background: "#eef2ff",
-            color: "#1e3a8a",
-            fontWeight: 600
-          }}
-        >
-          ← Back to questionnaire
-        </button>
-
-
+        {/* Initial questionnaire answers (clickable → back to wizard at that step) */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 10 }}>
+            Your answers
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {initialQuestions.map((q, stepIndex) => {
+              const answer = q.id === "primary_goal" ? answers.primary_goal_ranked : answers[q.id];
+              const display = getInitialAnswerDisplay(q.id, answer);
+              if (!display) return null;
+              return (
+                <div
+                  key={q.id}
+                  onClick={() => {
+                    if (typeof localStorage !== "undefined") {
+                      localStorage.setItem("wizard_step", String(stepIndex));
+                    }
+                    window.location.href = "/wizard";
+                  }}
+                  style={{
+                    fontSize: 13,
+                    padding: "8px 12px",
+                    background: "#eef2ff",
+                    borderRadius: 8,
+                    border: "1px solid #c7d2fe",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#c7d2fe";
+                    e.currentTarget.style.borderColor = "#2563eb";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#eef2ff";
+                    e.currentTarget.style.borderColor = "#c7d2fe";
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: "#1e3a8a" }}>
+                    Q{stepIndex + 1}:
+                  </span>{" "}
+                  <span style={{ color: "#475569" }}>{display}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {issuerWarnings.length > 0 && (
           <div
@@ -624,38 +876,53 @@ export default function ResultsPage() {
 
 
 
-        <h3 style={{ marginBottom: 16 }}>Refine your results</h3>
-
-
-
-        {visibleRefinements.map(q => (
-          <div key={q.id} style={{ marginBottom: 20 }}>
-            <div style={{ fontWeight: 500, marginBottom: 8 }}>
-              {q.label}
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 10 }}>
+          Refine your results
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {visibleRefinements.map(q => (
+            <div
+              key={q.id}
+              style={{
+                background: "#eef2ff",
+                border: "1px solid #c7d2fe",
+                borderRadius: 8,
+                padding: "12px 14px"
+              }}
+            >
+              <div style={{ fontWeight: 600, color: "#1e3a8a", fontSize: 14, marginBottom: 6 }}>
+                {q.question}
+              </div>
+              {"helper" in q && q.helper && (
+                <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>
+                  {q.helper}
+                </div>
+              )}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {q.options.map(option => (
+                  <button
+                    key={option.value}
+                    onClick={() =>
+                      setAnswers(prev => ({ ...prev, [q.id]: option.value }))
+                    }
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 999,
+                      border: "1px solid #c7d2fe",
+                      background:
+                        answers[q.id] === option.value ? "#2563eb" : "#ffffff",
+                      color:
+                        answers[q.id] === option.value ? "#ffffff" : "#1e3a8a",
+                      fontSize: 13
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {q.options.map(option => (
-                <button
-                  key={option}
-                  onClick={() =>
-                    setAnswers(prev => ({ ...prev, [q.id]: option }))
-                  }
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: 999,
-                    border: "1px solid #c7d2fe",
-                    background:
-                      answers[q.id] === option ? "#2563eb" : "#eef2ff",
-                    color:
-                      answers[q.id] === option ? "#ffffff" : "#1e3a8a"
-                  }}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
 
@@ -688,8 +955,8 @@ export default function ResultsPage() {
         {rankedCards.slice(0, showMoreMain).map(card => {
           const style = getIssuerStyle(card.issuer);
           const bonusDisplay = formatBonusDisplay(card);
-
-
+          const rewardLabel = getRewardModelLabel(card.reward_model);
+          const cashbackDisplay = getCashbackDisplay(card);
 
           return (
             <div
@@ -719,7 +986,11 @@ export default function ResultsPage() {
                     style={{
                       fontSize: 13,
                       color: "#475569",
-                      marginTop: 6
+                      marginTop: 6,
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 8,
+                      alignItems: "center"
                     }}
                   >
                     <span
@@ -733,12 +1004,28 @@ export default function ResultsPage() {
                     >
                       {card.issuer}
                     </span>
-                    {card.intro_apr_purchase
-                      ? ` • ${card.intro_apr_purchase}`
-                      : ""}
+                    {rewardLabel && (
+                      <span
+                        style={{
+                          background: "#f1f5f9",
+                          color: "#475569",
+                          padding: "3px 10px",
+                          borderRadius: 999,
+                          fontSize: 12
+                        }}
+                      >
+                        {rewardLabel}
+                      </span>
+                    )}
                   </div>
-
-
+                  <div style={{ marginTop: 8, fontSize: 13, color: "#64748b", display: "flex", flexWrap: "wrap", gap: 12 }}>
+                    {card.intro_apr_purchase && (
+                      <span><strong>Intro APR:</strong> {card.intro_apr_purchase}</span>
+                    )}
+                    {cashbackDisplay && (
+                      <span><strong>Cashback:</strong> {cashbackDisplay}</span>
+                    )}
+                  </div>
                   {bonusDisplay && (
                     <div
                       style={{
@@ -985,8 +1272,8 @@ export default function ResultsPage() {
             {otherTypeCards.map(card => {
               const style = getIssuerStyle(card.issuer);
               const bonusDisplay = formatBonusDisplay(card);
-
-
+              const rewardLabel = getRewardModelLabel(card.reward_model);
+              const cashbackDisplay = getCashbackDisplay(card);
 
               return (
                 <div
@@ -1016,7 +1303,11 @@ export default function ResultsPage() {
                         style={{
                           fontSize: 13,
                           color: "#475569",
-                          marginTop: 6
+                          marginTop: 6,
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 8,
+                          alignItems: "center"
                         }}
                       >
                         <span
@@ -1030,12 +1321,28 @@ export default function ResultsPage() {
                         >
                           {card.issuer}
                         </span>
-                        {card.intro_apr_purchase
-                          ? ` • ${card.intro_apr_purchase}`
-                          : ""}
+                        {rewardLabel && (
+                          <span
+                            style={{
+                              background: "#f1f5f9",
+                              color: "#475569",
+                              padding: "3px 10px",
+                              borderRadius: 999,
+                              fontSize: 12
+                            }}
+                          >
+                            {rewardLabel}
+                          </span>
+                        )}
                       </div>
-
-
+                      <div style={{ marginTop: 8, fontSize: 13, color: "#64748b", display: "flex", flexWrap: "wrap", gap: 12 }}>
+                        {card.intro_apr_purchase && (
+                          <span><strong>Intro APR:</strong> {card.intro_apr_purchase}</span>
+                        )}
+                        {cashbackDisplay && (
+                          <span><strong>Cashback:</strong> {cashbackDisplay}</span>
+                        )}
+                      </div>
                       {bonusDisplay && (
                         <div
                           style={{
@@ -1136,8 +1443,8 @@ export default function ResultsPage() {
               if (!card) return null;
               const style = getIssuerStyle(card.issuer);
               const bonusDisplay = formatBonusDisplay(card);
-
-
+              const rewardLabel = getRewardModelLabel(card.reward_model);
+              const cashbackDisplay = getCashbackDisplay(card);
 
               return (
                 <div
@@ -1165,7 +1472,11 @@ export default function ResultsPage() {
                         style={{
                           fontSize: 13,
                           color: "#475569",
-                          marginTop: 6
+                          marginTop: 6,
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 8,
+                          alignItems: "center"
                         }}
                       >
                         <span
@@ -1179,9 +1490,27 @@ export default function ResultsPage() {
                         >
                           {card.issuer}
                         </span>
-                        {card.intro_apr_purchase
-                          ? ` • ${card.intro_apr_purchase}`
-                          : ""}
+                        {rewardLabel && (
+                          <span
+                            style={{
+                              background: "#e2e8f0",
+                              color: "#475569",
+                              padding: "3px 10px",
+                              borderRadius: 999,
+                              fontSize: 12
+                            }}
+                          >
+                            {rewardLabel}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: 13, color: "#64748b", display: "flex", flexWrap: "wrap", gap: 12 }}>
+                        {card.intro_apr_purchase && (
+                          <span><strong>Intro APR:</strong> {card.intro_apr_purchase}</span>
+                        )}
+                        {cashbackDisplay && (
+                          <span><strong>Cashback:</strong> {cashbackDisplay}</span>
+                        )}
                       </div>
 
 
