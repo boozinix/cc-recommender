@@ -16,6 +16,11 @@ git restore app/wizard/page.tsx
 ```
 This will undo all changes to that specific file and restore it to the last saved version.
 
+### Revert Only the Left-Panel Answer/Refinement UI (Results Page)
+The "Your answers" and "Refine your results" boxes were updated with a reversible design. To undo just that UI:
+1. In `app/results/page.tsx`, search for `REVERSIBLE:` to find the two blocks.
+2. Restore the previous version of those blocks from git (e.g. `git show HEAD:app/results/page.tsx` and copy the old markup), or revert the whole file with `git restore app/results/page.tsx` if you want to undo all results-page changes.
+
 ### Undo ALL Changes (Nuclear Option)
 ```bash
 git reset --hard HEAD

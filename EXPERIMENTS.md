@@ -6,12 +6,14 @@ This guide explains how the code is **locked in** and how to run **experiments**
 
 ## What’s Locked In Right Now
 
-### Git tag: `v0.2` (current checkpoint — use this for UI work)
-- **Tag:** `v0.2`
-- **Meaning:** Scoring, refinements, travel tier, alternate-list brand priority, and UI phrasing are done. Good stopping point before UI improvements.
-- **To return here:** `git checkout v0.2` or `git reset --hard v0.2` (on a branch).
+### Git tag: `v0.4` (current checkpoint)
+- **Tag:** `v0.4`
+- **Meaning:** Bonus-to-min-spend ratio in scoring; bonus display shows “if you spend $X in N months”; “Expected cashback” label; “Exclude travel cards?” refinement (when Bonus is primary); left-panel UI: boxed “Your answers” and “Refine your results” with hierarchy, pills, hover Edit, microcopy, and card-per-question refinements. Reversible blocks marked in code and in SAFETY_GUIDE.
+- **To return here:** `git checkout v0.4` or `git reset --hard v0.4` (on a branch).
 
 ### Other tags
+- **`v0.3`** – Bank + brand logos, unified card layout; before bonus ratio and left-panel polish.
+- **`v0.2`** – Scoring, refinements, travel tier, alternate-list brand priority, UI phrasing; before logo work.
 - **`baseline-before-experiments`** – Code before any scoring/UX experiments (earlier snapshot).
 
 ### Branch: `main`

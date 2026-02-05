@@ -25,6 +25,8 @@ type Card = {
   cashback_rate_display?: string;
   cashback_rate_effective: string;
   estimated_bonus_value_usd: string;
+  minimum_spend_amount?: string;
+  spend_time_frame?: string;
   intro_apr_purchase: string;
   best_for: string;
   pros: string;
@@ -62,6 +64,49 @@ function getIssuerStyle(issuer: string) {
     bg: "#e5e7eb",
     text: "#111827"
   };
+}
+
+// Bank logos: public/logos/banks/ (lowercase, hyphenated filenames)
+const bankLogoFiles: Record<string, string> = {
+  "Chase": "chase.svg",
+  "Citi": "citi.svg",
+  "Capital One": "capital-one.svg",
+  "Bank of America": "bank-of-america.svg",
+  "Amex": "american-express.svg",
+  "Barclays": "barclays.jpeg",
+  "U.S. Bank": "us-bank.svg"
+};
+
+function getBankLogoPath(issuer: string): string | null {
+  const file = bankLogoFiles[issuer];
+  return file ? `/logos/banks/${file}` : null;
+}
+
+// Brand logos (airline/hotel): public/logos/brands/ — only for branded cards
+const brandLogoFiles: Record<string, string> = {
+  "alaska": "alaska.svg",
+  "american": "american.png",
+  "delta": "delta.svg",
+  "frontier": "frontier.svg",
+  "hilton": "hilton.svg",
+  "hyatt": "hyatt.png",
+  "ihg": "ihg.svg",
+  "jetblue": "jetblue.svg",
+  "marriott": "marriott.svg",
+  "southwest": "southwest.svg",
+  "united": "united.svg"
+};
+
+function getBrandLogoPath(card: Card): string | null {
+  const isBranded = card.reward_model === "airline" || card.reward_model === "hotel";
+  if (!isBranded) return null;
+  const family = (card.card_family || "").trim().toLowerCase();
+  if (family && brandLogoFiles[family]) return `/logos/brands/${brandLogoFiles[family]}`;
+  // Fallback: detect from card name (e.g. Frontier, Hyatt when card_family is empty)
+  const name = card.card_name.toLowerCase();
+  if (name.includes("frontier")) return "/logos/brands/frontier.svg";
+  if (name.includes("hyatt")) return "/logos/brands/hyatt.png";
+  return null;
 }
 
 
@@ -212,6 +257,19 @@ const refinementQuestions = [
       { value: "No, I pay in full", label: "No, I pay in full" },
       { value: "Doesn't matter", label: "Doesn't matter" }
     ]
+  },
+  {
+    id: "exclude_travel_cards",
+    question: "Exclude travel cards?",
+    helper: "When bonus is your main goal, results often include travel cards. Choose to see only cashback and other non-travel cards.",
+    dependsOn: (answers: Answers) => {
+      const { primary } = getGoalRanks(answers);
+      return primary === "Bonus";
+    },
+    options: [
+      { value: "No", label: "No, include travel cards" },
+      { value: "Yes", label: "Yes, exclude all travel cards" }
+    ]
   }
 ];
 
@@ -244,19 +302,21 @@ function formatBonusDisplay(card: Card) {
 
   const bonusType = card.signup_bonus_type?.toLowerCase() || "";
   let typeLabel = "";
-  
-  if (bonusType === "miles") {
-    typeLabel = "miles";
-  } else if (bonusType === "points") {
-    typeLabel = "points";
-  } else if (bonusType === "dollars") {
-    typeLabel = "dollars";
-  } else {
-    // Fallback if type is missing or unknown
-    typeLabel = bonusType || "rewards";
-  }
+  if (bonusType === "miles") typeLabel = "miles";
+  else if (bonusType === "points") typeLabel = "points";
+  else if (bonusType === "dollars") typeLabel = "dollars";
+  else typeLabel = bonusType || "rewards";
 
-  return `Worth $${value.toLocaleString()} estimated value in ${typeLabel}`;
+  let text = `Worth $${value.toLocaleString()} estimated value in ${typeLabel}`;
+  const minSpendRaw = (card.minimum_spend_amount || "").trim();
+  const timeFrame = (card.spend_time_frame || "").trim();
+  const minSpendNum = parseMinSpend(minSpendRaw);
+  const months = parseInt(timeFrame, 10);
+  if (minSpendNum > 0 && !Number.isNaN(months) && months > 0) {
+    const spendFormatted = minSpendRaw.includes("$") ? minSpendRaw : `$${Number(minSpendRaw.replace(/[,]/g, "")).toLocaleString()}`;
+    text += `, if you spend ${spendFormatted} in ${months} month${months === 1 ? "" : "s"}`;
+  }
+  return text;
 }
 
 /** Human-readable label for reward_model (travel, cashback, airline, hotel, etc.) */
@@ -392,6 +452,21 @@ function selectTopBrandOnly(
 
 
 // =========================================================
+// Parse minimum spend from CSV (e.g. "$500", "$4,000" -> 500, 4000)
+function parseMinSpend(raw: string | undefined): number {
+  if (!raw || !raw.trim()) return 0;
+  const cleaned = raw.replace(/[$,]/g, "").trim();
+  const n = parseInt(cleaned, 10);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+// Bonus-to-min-spend ratio (efficiency). Returns 0 if no min spend or no bonus.
+function getBonusToMinSpendRatio(bonusValue: number, minSpend: number): number {
+  if (minSpend <= 0 || bonusValue <= 0) return 0;
+  return bonusValue / minSpend;
+}
+
+// =========================================================
 // Scoring Engine - Restructured for Better Logic
 // =========================================================
 function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
@@ -401,13 +476,16 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
   if (ownedCards.includes(card.card_name)) return -9999;
   if (issuerExcluded(card.issuer, answers.cards_24mo)) return -9999;
 
+  const rewardModel = card.reward_model.toLowerCase();
+  const isTravelCard = rewardModel === "travel" || rewardModel === "airline" || rewardModel === "hotel";
+  if (answers.exclude_travel_cards === "Yes" && isTravelCard) return -9999;
+
   const { primary, secondary, tertiary } = getGoalRanks(answers);
   const cardFee = parseInt(card.annual_fee || "0", 10);
   const bonusValue = parseInt(card.estimated_bonus_value_usd || "0", 10);
+  const minSpend = parseMinSpend(card.minimum_spend_amount);
+  const bonusRatio = getBonusToMinSpendRatio(bonusValue, minSpend);
   const cashbackRate = parseFloat(card.cashback_rate_effective || "0");
-  const rewardModel = card.reward_model.toLowerCase();
-  // Travel cards = travel, airline, hotel (all display for Travel goal)
-  const isTravelCard = rewardModel === "travel" || rewardModel === "airline" || rewardModel === "hotel";
   const isCashbackCard = rewardModel === "cashback";
 
   let score = 0;
@@ -462,9 +540,10 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
       score -= 40; // Heavy penalty so non-travel cards don't crowd results
     }
   } else if (primary === "Cashback") {
-    // Key metric: effective cashback rate
+    // Key metric: effective cashback rate; secondary: bonus-to-min-spend ratio
     if (isCashbackCard) {
       score += 50; // Base for being cashback
+      if (bonusRatio > 0) score += Math.min(bonusRatio * 15, 12); // Lower weight – efficient bonus (e.g. $200/$500=0.4 → +6)
     }
     score += cashbackRate * 25; // Effective rate is the key number
   } else if (primary === "Everyday") {
@@ -474,9 +553,10 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
       score += 35; // 0% APR is important for everyday spending
     }
   } else if (primary === "Bonus") {
-    // Most important metric: bonus value
+    // Primary: bonus value; secondary: bonus-to-min-spend ratio (efficiency)
     if (answers.spend_comfort !== "None") {
       score += Math.min(bonusValue / 25, 80); // Bonus value is key (strong weight)
+      if (bonusRatio > 0) score += Math.min(bonusRatio * 25, 15); // Lower weight – prefer efficient bonuses
     } else {
       score -= 20;
     }
@@ -494,7 +574,10 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
       score -= 15;
     }
   } else if (secondary === "Cashback") {
-    if (isCashbackCard) score += 15;
+    if (isCashbackCard) {
+      score += 15;
+      if (bonusRatio > 0) score += Math.min(bonusRatio * 5, 4);
+    }
     score += cashbackRate * 5;
   } else if (secondary === "Everyday") {
     score += cashbackRate * 4;
@@ -502,6 +585,7 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
   } else if (secondary === "Bonus") {
     if (answers.spend_comfort !== "None") {
       score += Math.min(bonusValue / 80, 15);
+      if (bonusRatio > 0) score += Math.min(bonusRatio * 8, 5);
     }
   }
 
@@ -516,7 +600,10 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
       score -= 5;
     }
   } else if (tertiary === "Cashback") {
-    if (isCashbackCard) score += 8;
+    if (isCashbackCard) {
+      score += 8;
+      if (bonusRatio > 0) score += Math.min(bonusRatio * 3, 2);
+    }
     score += cashbackRate * 2;
   } else if (tertiary === "Everyday") {
     score += cashbackRate * 2;
@@ -524,6 +611,7 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
   } else if (tertiary === "Bonus") {
     if (answers.spend_comfort !== "None") {
       score += Math.min(bonusValue / 150, 8);
+      if (bonusRatio > 0) score += Math.min(bonusRatio * 4, 3);
     }
   }
 
@@ -567,6 +655,7 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
   // =========================================================
   if (answers.spend_comfort !== "None") {
     score += Math.min(bonusValue / 100, 20);
+    if (bonusRatio > 0) score += Math.min(bonusRatio * 8, 6); // Small global nudge for efficient bonuses
   } else {
     // User doesn't want bonus - small penalty for high bonus cards
     if (bonusValue > 500) score -= 5;
@@ -603,6 +692,7 @@ export default function ResultsPage() {
   const [rankedCards, setRankedCards] = useState<Card[]>([]);
   const [showOtherType, setShowOtherType] = useState(false);
   const [showMoreMain, setShowMoreMain] = useState<3 | 6 | 9>(3);
+  const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
 
 
 
@@ -809,16 +899,37 @@ export default function ResultsPage() {
       {/* LEFT PANEL */}
       <div style={{ background: "#ffffff", borderRadius: 12, padding: 20 }}>
 
-        {/* Initial questionnaire answers (clickable → back to wizard at that step) */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 10 }}>
+        {/* ========== REVERSIBLE: Your answers box (hierarchy, pills, accent, hover, microcopy) ========== */}
+        <div
+          style={{
+            marginBottom: 24,
+            border: "1px solid #e2e8f0",
+            borderRadius: 12,
+            overflow: "hidden",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
+          }}
+        >
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#334155",
+              padding: "12px 14px",
+              background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
+              borderBottom: "1px solid #e2e8f0"
+            }}
+          >
             Your answers
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 10 }}>
+            <p style={{ margin: "0 0 6px", fontSize: 11, color: "#94a3b8" }}>
+              Click any answer to change it.
+            </p>
             {initialQuestions.map((q, stepIndex) => {
               const answer = q.id === "primary_goal" ? answers.primary_goal_ranked : answers[q.id];
               const display = getInitialAnswerDisplay(q.id, answer);
               if (!display) return null;
+              const isHovered = hoveredAnswerIndex === stepIndex;
               return (
                 <div
                   key={q.id}
@@ -828,28 +939,39 @@ export default function ResultsPage() {
                     }
                     window.location.href = "/wizard";
                   }}
+                  onMouseEnter={() => setHoveredAnswerIndex(stepIndex)}
+                  onMouseLeave={() => setHoveredAnswerIndex(null)}
                   style={{
                     fontSize: 13,
-                    padding: "8px 12px",
-                    background: "#eef2ff",
+                    padding: "10px 14px",
+                    background: isHovered ? "#c7d2fe" : "#eef2ff",
                     borderRadius: 8,
                     border: "1px solid #c7d2fe",
+                    borderLeft: "3px solid #2563eb",
+                    boxShadow: isHovered ? "0 2px 6px rgba(37,99,235,0.15)" : "0 1px 2px rgba(0,0,0,0.04)",
                     cursor: "pointer",
-                    transition: "all 0.2s ease"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#c7d2fe";
-                    e.currentTarget.style.borderColor = "#2563eb";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "#eef2ff";
-                    e.currentTarget.style.borderColor = "#c7d2fe";
+                    transition: "all 0.2s ease",
+                    transform: isHovered ? "translateY(-2px)" : "translateY(0)"
                   }}
                 >
-                  <span style={{ fontWeight: 600, color: "#1e3a8a" }}>
-                    Q{stepIndex + 1}:
-                  </span>{" "}
+                  <span
+                    style={{
+                      display: "inline-block",
+                      fontWeight: 700,
+                      color: "#1e3a8a",
+                      background: "rgba(255,255,255,0.8)",
+                      padding: "2px 8px",
+                      borderRadius: 6,
+                      marginRight: 8,
+                      fontSize: 12
+                    }}
+                  >
+                    Q{stepIndex + 1}
+                  </span>
                   <span style={{ color: "#475569" }}>{display}</span>
+                  {isHovered && (
+                    <span style={{ marginLeft: 8, fontSize: 11, color: "#2563eb", fontWeight: 600 }}>Edit</span>
+                  )}
                 </div>
               );
             })}
@@ -876,52 +998,73 @@ export default function ResultsPage() {
 
 
 
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 10 }}>
-          Refine your results
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {visibleRefinements.map(q => (
-            <div
-              key={q.id}
-              style={{
-                background: "#eef2ff",
-                border: "1px solid #c7d2fe",
-                borderRadius: 8,
-                padding: "12px 14px"
-              }}
-            >
-              <div style={{ fontWeight: 600, color: "#1e3a8a", fontSize: 14, marginBottom: 6 }}>
-                {q.question}
-              </div>
-              {"helper" in q && q.helper && (
-                <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>
-                  {q.helper}
+        {/* ========== REVERSIBLE: Refine box (same style as Your answers, card per question) ========== */}
+        <div
+          style={{
+            marginBottom: 24,
+            border: "1px solid #e2e8f0",
+            borderRadius: 12,
+            overflow: "hidden",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
+          }}
+        >
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#334155",
+              padding: "12px 14px",
+              background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
+              borderBottom: "1px solid #e2e8f0"
+            }}
+          >
+            Refine your results
+          </div>
+          <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 14 }}>
+            {visibleRefinements.map(q => (
+              <div
+                key={q.id}
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 10,
+                  padding: "14px 16px",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.04)"
+                }}
+              >
+                <div style={{ fontWeight: 600, color: "#1e3a8a", fontSize: 14, marginBottom: 6 }}>
+                  {q.question}
                 </div>
-              )}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {q.options.map(option => (
-                  <button
-                    key={option.value}
-                    onClick={() =>
-                      setAnswers(prev => ({ ...prev, [q.id]: option.value }))
-                    }
-                    style={{
-                      padding: "6px 14px",
-                      borderRadius: 999,
-                      border: "1px solid #c7d2fe",
-                      background:
-                        answers[q.id] === option.value ? "#2563eb" : "#ffffff",
-                      color:
-                        answers[q.id] === option.value ? "#ffffff" : "#1e3a8a",
-                      fontSize: 13
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+                {"helper" in q && q.helper && (
+                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>
+                    {q.helper}
+                  </div>
+                )}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {q.options.map(option => (
+                    <button
+                      key={option.value}
+                      onClick={() =>
+                        setAnswers(prev => ({ ...prev, [q.id]: option.value }))
+                      }
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: 999,
+                        border: "1px solid #c7d2fe",
+                        background:
+                          answers[q.id] === option.value ? "#2563eb" : "#ffffff",
+                        color:
+                          answers[q.id] === option.value ? "#ffffff" : "#1e3a8a",
+                        fontSize: 13
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -957,201 +1100,119 @@ export default function ResultsPage() {
           const bonusDisplay = formatBonusDisplay(card);
           const rewardLabel = getRewardModelLabel(card.reward_model);
           const cashbackDisplay = getCashbackDisplay(card);
+          const bankLogo = getBankLogoPath(card.issuer);
+          const brandLogo = getBrandLogoPath(card);
 
           return (
             <div
               key={card.card_name}
               style={{
-                background:
-                  "linear-gradient(180deg, #f8fafc 0%, #ffffff 40%)",
+                display: "flex",
+                gap: 16,
+                background: "#ffffff",
                 borderRadius: 14,
-                padding: 18,
+                padding: 16,
                 marginBottom: 20,
                 border: "1px solid #e2e8f0",
-                boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
+                boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
               }}
             >
               <div
                 style={{
+                  width: 72,
+                  minWidth: 72,
+                  height: 72,
+                  borderRadius: 10,
+                  background: bankLogo ? "transparent" : "linear-gradient(145deg, #f1f5f9 0%, #e2e8f0 100%)",
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start"
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  overflow: "hidden"
                 }}
               >
-                <div>
-                  <div style={{ fontSize: 17, fontWeight: 600 }}>
+                {bankLogo ? (
+                  <img src={bankLogo} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                ) : null}
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1.3 }}>
                     {card.card_name}
+                  </h3>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    {brandLogo && (
+                      <img src={brandLogo} alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />
+                    )}
+                    <label style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                      <input
+                        type="checkbox"
+                        checked={ownedCards.includes(card.card_name)}
+                        onChange={() =>
+                          setOwnedCards(prev =>
+                            prev.includes(card.card_name)
+                              ? prev.filter(c => c !== card.card_name)
+                              : [...prev, card.card_name]
+                          )
+                        }
+                      />{" "}
+                      Have it / Not interested
+                    </label>
                   </div>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: "#475569",
-                      marginTop: 6,
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 8,
-                      alignItems: "center"
-                    }}
-                  >
-                    <span
-                      style={{
-                        background: style.bg,
-                        color: style.text,
-                        padding: "3px 10px",
-                        borderRadius: 999,
-                        fontSize: 12
-                      }}
-                    >
-                      {card.issuer}
+                </div>
+
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, alignItems: "center" }}>
+                  <span style={{ background: style.bg, color: style.text, padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
+                    {card.issuer}
+                  </span>
+                  {rewardLabel && (
+                    <span style={{ background: "#f1f5f9", color: "#475569", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>
+                      {rewardLabel}
                     </span>
-                    {rewardLabel && (
-                      <span
-                        style={{
-                          background: "#f1f5f9",
-                          color: "#475569",
-                          padding: "3px 10px",
-                          borderRadius: 999,
-                          fontSize: 12
-                        }}
-                      >
-                        {rewardLabel}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ marginTop: 8, fontSize: 13, color: "#64748b", display: "flex", flexWrap: "wrap", gap: 12 }}>
-                    {card.intro_apr_purchase && (
-                      <span><strong>Intro APR:</strong> {card.intro_apr_purchase}</span>
-                    )}
-                    {cashbackDisplay && (
-                      <span><strong>Cashback:</strong> {cashbackDisplay}</span>
-                    )}
-                  </div>
-                  {bonusDisplay && (
-                    <div
-                      style={{
-                        marginTop: 8,
-                        fontSize: 13,
-                        color: "#0f172a",
-                        background: "#e0f2fe",
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        display: "inline-block"
-                      }}
-                    >
-                      <strong>Bonus:</strong> {bonusDisplay}
-                    </div>
+                  )}
+                  {card.intro_apr_purchase && (
+                    <span style={{ color: "#64748b", fontSize: 11 }}>APR {card.intro_apr_purchase}</span>
+                  )}
+                  {cashbackDisplay && (
+                    <span style={{ color: "#64748b", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>
                   )}
                 </div>
 
+                {bonusDisplay && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: "#0c4a6e", background: "#e0f2fe", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>
+                    {bonusDisplay}
+                  </div>
+                )}
 
+                {card.best_for && (
+                  <p style={{ margin: "8px 0 0", fontSize: 13, color: "#64748b", lineHeight: 1.4 }}>
+                    {card.best_for}
+                  </p>
+                )}
 
-                <label style={{ fontSize: 13 }}>
-                  <input
-                    type="checkbox"
-                    checked={ownedCards.includes(card.card_name)}
-                    onChange={() =>
-                      setOwnedCards(prev =>
-                        prev.includes(card.card_name)
-                          ? prev.filter(c => c !== card.card_name)
-                          : [...prev, card.card_name]
-                      )
-                    }
-                  />{" "}
-                  I already have this, or I am not interested
-                </label>
-              </div>
-
-
-
-              {card.best_for && (
-                <div
-                  style={{
-                    marginTop: 12,
-                    fontSize: 14,
-                    background: "#f1f5f9",
-                    padding: 10,
-                    borderRadius: 8
-                  }}
-                >
-                  <strong>Best for:</strong> {card.best_for}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                  {card.pros && (
+                    <div style={{ background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
+                      <div style={{ fontWeight: 600, fontSize: 11, color: "#0f766e", marginBottom: 4 }}>Pros</div>
+                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#134e4a", lineHeight: 1.5 }}>
+                        {card.pros.split(";").slice(0, 3).map((p, i) => (
+                          <li key={i}>{p.trim()}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {card.cons && (
+                    <div style={{ background: "#fef2f2", padding: 10, borderRadius: 8 }}>
+                      <div style={{ fontWeight: 600, fontSize: 11, color: "#9f1239", marginBottom: 4 }}>Cons</div>
+                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#881337", lineHeight: 1.5 }}>
+                        {card.cons.split(";").slice(0, 3).map((c, i) => (
+                          <li key={i}>{c.trim()}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
-              )}
-
-
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 16,
-                  marginTop: 14
-                }}
-              >
-                {card.pros && (
-                  <div
-                    style={{
-                      background: "#ecfeff",
-                      padding: 12,
-                      borderRadius: 10
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        fontSize: 14,
-                        marginBottom: 6,
-                        color: "#0f766e"
-                      }}
-                    >
-                      Pros
-                    </div>
-                    <ul
-                      style={{
-                        paddingLeft: 18,
-                        fontSize: 13,
-                        color: "#134e4a"
-                      }}
-                    >
-                      {card.pros.split(";").map(p => (
-                        <li key={p}>{p.trim()}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-
-
-                {card.cons && (
-                  <div
-                    style={{
-                      background: "#fff1f2",
-                      padding: 12,
-                      borderRadius: 10
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        fontSize: 14,
-                        marginBottom: 6,
-                        color: "#9f1239"
-                      }}
-                    >
-                      Cons
-                    </div>
-                    <ul
-                      style={{
-                        paddingLeft: 18,
-                        fontSize: 13,
-                        color: "#881337"
-                      }}
-                    >
-                      {card.cons.split(";").map(c => (
-                        <li key={c}>{c.trim()}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
             </div>
           );
@@ -1274,153 +1335,59 @@ export default function ResultsPage() {
               const bonusDisplay = formatBonusDisplay(card);
               const rewardLabel = getRewardModelLabel(card.reward_model);
               const cashbackDisplay = getCashbackDisplay(card);
+              const bankLogo = getBankLogoPath(card.issuer);
+              const brandLogo = getBrandLogoPath(card);
 
               return (
                 <div
                   key={card.card_name}
                   style={{
-                    background:
-                      "linear-gradient(180deg, #f8fafc 0%, #ffffff 40%)",
+                    display: "flex",
+                    gap: 16,
+                    background: "#ffffff",
                     borderRadius: 14,
-                    padding: 18,
+                    padding: 16,
                     marginBottom: 20,
                     border: "1px solid #e2e8f0",
-                    boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start"
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 17, fontWeight: 600 }}>
-                        {card.card_name}
+                  <div style={{ width: 72, minWidth: 72, height: 72, borderRadius: 10, background: bankLogo ? "transparent" : "linear-gradient(145deg, #f1f5f9 0%, #e2e8f0 100%)", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {bankLogo ? <img src={bankLogo} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1.3 }}>{card.card_name}</h3>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        {brandLogo && <img src={brandLogo} alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />}
+                        <label style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                          <input type="checkbox" checked={ownedCards.includes(card.card_name)} onChange={() => setOwnedCards(prev => prev.includes(card.card_name) ? prev.filter(c => c !== card.card_name) : [...prev, card.card_name])} />{" "}
+                          Have it / Not interested
+                        </label>
                       </div>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#475569",
-                          marginTop: 6,
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: 8,
-                          alignItems: "center"
-                        }}
-                      >
-                        <span
-                          style={{
-                            background: style.bg,
-                            color: style.text,
-                            padding: "3px 10px",
-                            borderRadius: 999,
-                            fontSize: 12
-                          }}
-                        >
-                          {card.issuer}
-                        </span>
-                        {rewardLabel && (
-                          <span
-                            style={{
-                              background: "#f1f5f9",
-                              color: "#475569",
-                              padding: "3px 10px",
-                              borderRadius: 999,
-                              fontSize: 12
-                            }}
-                          >
-                            {rewardLabel}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ marginTop: 8, fontSize: 13, color: "#64748b", display: "flex", flexWrap: "wrap", gap: 12 }}>
-                        {card.intro_apr_purchase && (
-                          <span><strong>Intro APR:</strong> {card.intro_apr_purchase}</span>
-                        )}
-                        {cashbackDisplay && (
-                          <span><strong>Cashback:</strong> {cashbackDisplay}</span>
-                        )}
-                      </div>
-                      {bonusDisplay && (
-                        <div
-                          style={{
-                            marginTop: 8,
-                            fontSize: 13,
-                            color: "#0f172a",
-                            background: "#e0f2fe",
-                            padding: "6px 10px",
-                            borderRadius: 8,
-                            display: "inline-block"
-                          }}
-                        >
-                          <strong>Bonus:</strong> {bonusDisplay}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, alignItems: "center" }}>
+                      <span style={{ background: style.bg, color: style.text, padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{card.issuer}</span>
+                      {rewardLabel && <span style={{ background: "#f1f5f9", color: "#475569", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>{rewardLabel}</span>}
+                      {card.intro_apr_purchase && <span style={{ color: "#64748b", fontSize: 11 }}>APR {card.intro_apr_purchase}</span>}
+                      {cashbackDisplay && <span style={{ color: "#64748b", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>}
+                    </div>
+                    {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "#0c4a6e", background: "#e0f2fe", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
+                    {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "#64748b", lineHeight: 1.4 }}>{card.best_for}</p>}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                      {card.pros && (
+                        <div style={{ background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
+                          <div style={{ fontWeight: 600, fontSize: 11, color: "#0f766e", marginBottom: 4 }}>Pros</div>
+                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#134e4a", lineHeight: 1.5 }}>{card.pros.split(";").slice(0, 3).map((p, i) => <li key={i}>{p.trim()}</li>)}</ul>
+                        </div>
+                      )}
+                      {card.cons && (
+                        <div style={{ background: "#fef2f2", padding: 10, borderRadius: 8 }}>
+                          <div style={{ fontWeight: 600, fontSize: 11, color: "#9f1239", marginBottom: 4 }}>Cons</div>
+                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#881337", lineHeight: 1.5 }}>{card.cons.split(";").slice(0, 3).map((c, i) => <li key={i}>{c.trim()}</li>)}</ul>
                         </div>
                       )}
                     </div>
-
-
-
-                    <label style={{ fontSize: 13 }}>
-                      <input
-                        type="checkbox"
-                        checked={ownedCards.includes(card.card_name)}
-                        onChange={() =>
-                          setOwnedCards(prev =>
-                            prev.includes(card.card_name)
-                              ? prev.filter(c => c !== card.card_name)
-                              : [...prev, card.card_name]
-                          )
-                        }
-                      />{" "}
-                      I already have this, or I am not interested
-                    </label>
-                  </div>
-
-
-
-                  {card.best_for && (
-                    <div
-                      style={{
-                        marginTop: 12,
-                        fontSize: 14,
-                        background: "#f1f5f9",
-                        padding: 10,
-                        borderRadius: 8
-                      }}
-                    >
-                      <strong>Best for:</strong> {card.best_for}
-                    </div>
-                  )}
-
-
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: 16,
-                      marginTop: 14
-                    }}
-                  >
-                    {card.pros && (
-                      <ul style={{ paddingLeft: 18, fontSize: 13 }}>
-                        {card.pros.split(";").map(p => (
-                          <li key={p}>{p.trim()}</li>
-                        ))}
-                      </ul>
-                    )}
-
-
-
-                    {card.cons && (
-                      <ul style={{ paddingLeft: 18, fontSize: 13 }}>
-                        {card.cons.split(";").map(c => (
-                          <li key={c}>{c.trim()}</li>
-                        ))}
-                      </ul>
-                    )}
                   </div>
                 </div>
               );
@@ -1445,143 +1412,59 @@ export default function ResultsPage() {
               const bonusDisplay = formatBonusDisplay(card);
               const rewardLabel = getRewardModelLabel(card.reward_model);
               const cashbackDisplay = getCashbackDisplay(card);
+              const bankLogo = getBankLogoPath(card.issuer);
+              const brandLogo = getBrandLogoPath(card);
 
               return (
                 <div
                   key={name}
                   style={{
-                    background: "#f1f5f9",
-                    borderRadius: 12,
-                    padding: 18,
+                    display: "flex",
+                    gap: 16,
+                    background: "#f8fafc",
+                    borderRadius: 14,
+                    padding: 16,
                     marginBottom: 16,
-                    border: "1px solid #e2e8f0"
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.04)"
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start"
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 17, fontWeight: 600 }}>
-                        {card.card_name}
+                  <div style={{ width: 72, minWidth: 72, height: 72, borderRadius: 10, background: bankLogo ? "transparent" : "linear-gradient(145deg, #e2e8f0 0%, #cbd5e1 100%)", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {bankLogo ? <img src={bankLogo} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1.3 }}>{card.card_name}</h3>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        {brandLogo && <img src={brandLogo} alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />}
+                        <label style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                          <input type="checkbox" checked onChange={() => setOwnedCards(prev => prev.filter(c => c !== name))} />{" "}
+                          Remove
+                        </label>
                       </div>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#475569",
-                          marginTop: 6,
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: 8,
-                          alignItems: "center"
-                        }}
-                      >
-                        <span
-                          style={{
-                            background: style.bg,
-                            color: style.text,
-                            padding: "3px 10px",
-                            borderRadius: 999,
-                            fontSize: 12
-                          }}
-                        >
-                          {card.issuer}
-                        </span>
-                        {rewardLabel && (
-                          <span
-                            style={{
-                              background: "#e2e8f0",
-                              color: "#475569",
-                              padding: "3px 10px",
-                              borderRadius: 999,
-                              fontSize: 12
-                            }}
-                          >
-                            {rewardLabel}
-                          </span>
-                        )}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, alignItems: "center" }}>
+                      <span style={{ background: style.bg, color: style.text, padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{card.issuer}</span>
+                      {rewardLabel && <span style={{ background: "#e2e8f0", color: "#475569", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>{rewardLabel}</span>}
+                      {card.intro_apr_purchase && <span style={{ color: "#64748b", fontSize: 11 }}>APR {card.intro_apr_purchase}</span>}
+{cashbackDisplay && <span style={{ color: "#64748b", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>}
                       </div>
-                      <div style={{ marginTop: 8, fontSize: 13, color: "#64748b", display: "flex", flexWrap: "wrap", gap: 12 }}>
-                        {card.intro_apr_purchase && (
-                          <span><strong>Intro APR:</strong> {card.intro_apr_purchase}</span>
-                        )}
-                        {cashbackDisplay && (
-                          <span><strong>Cashback:</strong> {cashbackDisplay}</span>
-                        )}
-                      </div>
-
-
-                      {bonusDisplay && (
-                        <div
-                          style={{
-                            marginTop: 8,
-                            fontSize: 13,
-                            color: "#0f172a",
-                            background: "#e0f2fe",
-                            padding: "6px 10px",
-                            borderRadius: 8,
-                            display: "inline-block"
-                          }}
-                        >
-                          <strong>Bonus:</strong> {bonusDisplay}
+                    {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "#0c4a6e", background: "#e0f2fe", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
+                    {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "#64748b", lineHeight: 1.4 }}>{card.best_for}</p>}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                      {card.pros && (
+                        <div style={{ background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
+                          <div style={{ fontWeight: 600, fontSize: 11, color: "#0f766e", marginBottom: 4 }}>Pros</div>
+                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#134e4a", lineHeight: 1.5 }}>{card.pros.split(";").slice(0, 3).map((p, i) => <li key={i}>{p.trim()}</li>)}</ul>
+                        </div>
+                      )}
+                      {card.cons && (
+                        <div style={{ background: "#fef2f2", padding: 10, borderRadius: 8 }}>
+                          <div style={{ fontWeight: 600, fontSize: 11, color: "#9f1239", marginBottom: 4 }}>Cons</div>
+                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#881337", lineHeight: 1.5 }}>{card.cons.split(";").slice(0, 3).map((c, i) => <li key={i}>{c.trim()}</li>)}</ul>
                         </div>
                       )}
                     </div>
-
-
-
-                    <label style={{ fontSize: 13 }}>
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        onChange={() =>
-                          setOwnedCards(prev =>
-                            prev.filter(c => c !== name)
-                          )
-                        }
-                      />{" "}
-                      Remove
-                    </label>
-                  </div>
-
-
-
-                  {card.best_for && (
-                    <div style={{ marginTop: 12, fontSize: 14 }}>
-                      <strong>Best for:</strong> {card.best_for}
-                    </div>
-                  )}
-
-
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: 16,
-                      marginTop: 14
-                    }}
-                  >
-                    {card.pros && (
-                      <ul style={{ paddingLeft: 18, fontSize: 13 }}>
-                        {card.pros.split(";").map(p => (
-                          <li key={p}>{p.trim()}</li>
-                        ))}
-                      </ul>
-                    )}
-
-
-
-                    {card.cons && (
-                      <ul style={{ paddingLeft: 18, fontSize: 13 }}>
-                        {card.cons.split(";").map(c => (
-                          <li key={c}>{c.trim()}</li>
-                        ))}
-                      </ul>
-                    )}
                   </div>
                 </div>
               );
