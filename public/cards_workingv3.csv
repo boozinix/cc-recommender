@@ -1,0 +1,60 @@
+card_name,issuer,card_type,annual_fee,annual_fee_year_1,annual_fee_year_2_plus,reward_model,cashback_rate_display,cashback_rate_effective,signup_bonus,estimated_bonus_value_usd,intro_apr_purchase,foreign_tx_fee,best_for,why_this_card_exiss,pros,cons
+
+Chase Freedom Unlimited,Chase,personal,0,0,0,cashback,"5 / 3 / 1.5",1.8,200,200,"0% for 15 months","Yes","Everyday cashback","Strong no-fee card","Great categories","Foreign fee"
+Chase Freedom Flex,Chase,personal,0,0,0,cashback,"5 / 3 / 1",1.6,200,200,"0% for 15 months","Yes","Bonus categories","Rotating rewards","High upside","Activation required"
+Chase Amazon Prime Visa,Chase,personal,0,0,0,cashback,"5 / 2 / 1",1.8,150,150,"N/A","Yes","Amazon shoppers","Best for Amazon","5% Amazon","Prime needed"
+Chase Freedom Rise,Chase,personal,0,0,0,cashback,"1.5",1.5,0,0,"N/A","Yes","Starter card","Easy approval","Simple","Low rewards"
+
+Chase Sapphire Preferred,Chase,personal,95,95,95,travel,"N/A",0.5,60000,900,"N/A","No","Beginner travel","Best starter travel card","Great partners","Annual fee"
+Chase Sapphire Reserve,Chase,personal,550,550,550,travel,"N/A",0.5,60000,1200,"N/A","No","Premium travel","Luxury travel perks","Lounge access","High fee"
+Chase Ink Cash,Chase,business,0,0,0,cashback,"5 / 2 / 1",2.0,750,750,"0% for 12 months","Yes","Business expenses","High business rewards","5% office & telecom","Business only"
+Chase Ink Unlimited,Chase,business,0,0,0,cashback,"1.5",1.5,750,750,"0% for 12 months","Yes","Simple business","Flat rate business card","Easy","No categories"
+
+Chase United Explorer,Chase,personal,95,0,95,airline,"N/A",0.5,60000,800,"N/A","No","United flyers","Best United starter","Free checked bag","Airline locked"
+Chase Southwest Plus,Chase,personal,69,69,69,airline,"N/A",0.5,50000,700,"N/A","No","Southwest fans","Great domestic travel","Free checked bags","Limited partners"
+Chase World of Hyatt,Chase,personal,95,95,95,hotel,"N/A",0.5,60000,900,"N/A","No","Hyatt loyalists","Best hotel value","Free night","Hotel only"
+Chase Marriott Boundless,Chase,personal,95,95,95,hotel,"N/A",0.5,75000,850,"N/A","No","Marriott travelers","Huge hotel network","Free night","Hotel only"
+
+Citi Double Cash,Citi,personal,0,0,0,cashback,"2",2.0,200,200,"0% for balance transfers","Yes","Flat cashback","Simple 2%","Easy","No categories"
+Citi Custom Cash,Citi,personal,0,0,0,cashback,"5 / 1",2.2,200,200,"0% for balance transfers","Yes","Top category","5% on top spend","High rate","$500 cap"
+Citi Strata Premier,Citi,personal,95,95,95,travel,"N/A",0.5,60000,750,"N/A","No","Travel rewards","Good multipliers","Transfer partners","Complex"
+
+Capital One Quicksilver,Capital One,personal,0,0,0,cashback,"1.5",1.5,150,150,"0% for 15 months","Yes","Simple cashback","Flat rate","Easy","No bonuses"
+Capital One SavorOne,Capital One,personal,0,0,0,cashback,"3 / 2 / 1",1.7,200,200,"0% for 15 months","Yes","Dining","Food rewards","Good categories","Lower ceiling"
+Capital One Venture,Capital One,personal,95,95,95,travel,"N/A",0.5,75000,750,"N/A","No","Simple travel","Flat miles","Easy to use","Less partners"
+Capital One Venture X,Capital One,personal,395,395,395,travel,"N/A",0.5,75000,1000,"N/A","No","Premium travel","Great value","Lounge access","Fee"
+Capital One Platinum Secured,Capital One,secured,0,0,0,cashback,"0",0,0,0,"N/A","Yes","Bad credit","Credit building","Easy approval","No rewards"
+Capital One Student Quicksilver,Capital One,student,0,0,0,cashback,"1.5",1.5,50,50,"N/A","Yes","Students","Simple starter","Flat cashback","Low bonus"
+Capital One Platinum,Capital One,personal,0,0,0,secured,"0",0,0,0,"N/A","Yes","Build credit","Capital One entry card","No rewards","No perks"
+Capital One Spark Cash,Capital One,business,0,0,0,cashback,"2",2.0,500,500,"0% for 9 months","Yes","Business flat cashback","Best no-fee business card","2% back on all purchases","No bonus categories"
+Capital One Spark Cash Plus,Capital One,business,0,0,0,cashback,"2 / 3",2.2,750,750,"N/A","Yes","Premium business cashback","Tiered high rewards","3% on first $150k then 2%","Annual fee waived first year"
+Capital One Spark Cash Select,Capital One,business,0,0,0,cashback,"1.5",1.5,300,300,"0% for 9 months","Yes","Basic business cashback","Simple flat rewards","Flexible","Lower bonus"
+Capital One Venture X Business,Capital One,business,395,395,395,travel,"N/A",0.5,75000,1000,"N/A","No","Premium biz travel","High business travel value","Lounge access & credits","Annual fee"
+Capital One Spark Miles,Capital One,business,95,0,95,travel,"N/A",0.5,50000,600,"N/A","No","Business travel miles","Simple travel rewards","Good bonus","Fewer partners"
+
+
+Bank of America Customized Cash,Bank of America,personal,0,0,0,cashback,"3 / 2 / 1",1.7,200,200,"0% for 15 months","Yes","Custom category","Pick your category","Flexible","Caps"
+Bank of America Unlimited Cash,Bank of America,personal,0,0,0,cashback,"1.5",1.5,150,150,"0% for 15 months","Yes","Flat cashback","Simple unlimited","Easy","No categories"
+BankAmericard Cash Rewards,Bank of America,personal,0,0,0,cashback,"3 / 2 / 1",1.6,150,150,"0% for 15 months","Yes","Intro APR + cashback","Balance + rewards","Category bonuses","Caps"
+Bank of America Travel Rewards,Bank of America,personal,0,0,0,travel,"1.5",1.5,250,250,"0% for 15 months","No","No-fee travel","Simple travel card","No foreign fee","Low ceiling"
+Bank of America Premium Rewards,Bank of America,personal,95,95,95,travel,"1.5",1.5,600,600,"N/A","No","Premium travel","Good all-around","Strong bonus","Annual fee"
+
+Bank of America Business Advantage Travel Rewards,Bank of America,business,0,0,0,travel,"1.5",1.5,25000,250,"0% for 9 months","No","Business travel","Good entry-level business travel card","No foreign fee, flexible rewards","Lower earning rates than premium cards"
+Bank of America Business Advantage Atomos Rewards,Bank of America,business,95,0,95,cashback,"3 / 2 / 1",1.7,50000,500,"0% for 9 months","Yes","Business rewards flexibility","Broad everyday and bonus categories","Good bonus structure","Annual fee"
+Bank of America Business Advantage Customized Cash Rewards,Bank of America,business,0,0,0,cashback,"3 / 2 / 1",1.7,30000,300,"0% for 9 months","Yes","Custom business cash back","Set your top category","Flexible earning","Category caps"
+
+
+U.S. Bank Cash+,U.S. Bank,personal,0,0,0,cashback,"5 / 2 / 1",2.0,200,200,"0% for 12 months","Yes","Category rewards","High upside","5% categories","Activation"
+U.S. Bank Unlimited Cash,U.S. Bank,personal,0,0,0,cashback,"1.5",1.5,150,150,"0% for 12 months","Yes","Simple cashback","Flat rate card","Easy","Low ceiling"
+
+Amex Blue Cash Everyday,Amex,personal,0,0,0,cashback,"3 / 2 / 1",1.7,200,200,"0% for 15 months","Yes","Groceries & gas","Great everyday Amex","3% groceries & gas","Foreign fee"
+Amex Blue Cash Preferred,Amex,personal,95,0,95,cashback,"6 / 3 / 1",2.5,300,300,"0% for 12 months","Yes","High grocery spend","Best grocery card","6% groceries","Annual fee"
+Amex Green,Amex,personal,150,150,150,travel,"N/A",0.5,60000,750,"N/A","No","Entry travel","Simple travel rewards","Good credits","Mid fee"
+Amex Gold,Amex,personal,250,250,250,travel,"N/A",0.5,60000,1000,"N/A","No","Food & travel","Best dining card","High rewards","Couponing"
+Amex Platinum,Amex,personal,695,695,695,travel,"N/A",0.5,80000,1500,"N/A","No","Luxury travel","Top perks","Lounge access","Very high fee"
+
+Barclays JetBlue Premier,Barclays,personal,99,99,99,airline,"N/A",0.5,60000,800,"N/A","No","JetBlue frequent flyers","Higher tier JetBlue card with bonus points","Free checked bags & Mosaic qualifying points","Annual fee"
+Barclays JetBlue Plus,Barclays,personal,69,69,69,airline,"N/A",0.5,50000,700,"N/A","No","JetBlue occasional flyers","Entry JetBlue card with bonus points","Free checked bags on JetBlue","Limited extras compared to Premier"
+Barclays Frontier Airlines World Mastercard,Barclays,personal,0,0,0,airline,"N/A",0.4,30000,350,"N/A","No","Frontier airline travelers","No fee co-branded Frontier card","Discounts on bags & inflight purchases","No foreign fee and limited partners"
+Barclays JetBlue Business Card,Barclays,business,99,99,99,airline,"N/A",0.5,70000,900,"N/A","No","JetBlue business travel","Business-oriented JetBlue bonus","Points toward flights & Mosaic perks","Annual fee for business card"
+

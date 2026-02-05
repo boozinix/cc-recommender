@@ -1,0 +1,8 @@
+Card_name,Issuer,card_Type,Annual_Fees,reward_model,Travel_Partners,Travel_Partners_mapping,signup_bonus,Bonus_req,Rewards_Complexity,Rewards_Complexity_mapping,Credit_Score,Credit_Score_mapping,issuer_rules_sens,issuer_rules_sens_mapping,why_this_card_exiss
+Sapphire Reserve,Chase,Personal,800,Travel,High,3,"100,000","6,000",High,3,High,3,High,3,
+Sapphire Preferred,Chase,Personal,100,Travel,High,3,"50,000","2,000",Low,1,High,3,High,3,
+Freedom Unlimited,Chase,Personal,0,Cashback,None,0,"10,000","1,000",None,0,High,3,High,3,
+Freedom Flex,Chase,Personal,0,Cashback,None,0,"10,000",100,None,0,High,3,High,3,
+Double Cash,Citi,Personal,0,Cashback,None,0,0,0,None,0,High,3,Medium,2,
+Strata Premier,Citi,Personal,100,Travel,Low,1,"75,000","4,500",Low,1,High,3,Medium,2,
+Costco,Citi,Personal,0,Cashback,None,0,"20,000","3,000",None,0,High,3,Medium,2,
