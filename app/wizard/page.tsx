@@ -78,6 +78,11 @@ const fadeInStyle = `
 // =======================
 export default function Wizard() {
 
+  // -----------------------
+  // Feature Flags
+  // -----------------------
+  // Set to false to hide the floating previous answers summary
+  const SHOW_PREVIOUS_ANSWERS = true;
 
   // -----------------------
   // State
@@ -366,7 +371,7 @@ export default function Wizard() {
       {/* =======================
           Previous Answers Summary (Floating)
          ======================= */}
-      {cardMode && step > 0 && previousAnswers.length > 0 && (
+      {SHOW_PREVIOUS_ANSWERS && cardMode && step > 0 && previousAnswers.length > 0 && (
         <div
           style={{
             width: "100%",
