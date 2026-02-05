@@ -348,7 +348,7 @@ export default function ResultsPage() {
   const [ownedCards, setOwnedCards] = useState<string[]>([]);
   const [rankedCards, setRankedCards] = useState<Card[]>([]);
   const [showOtherType, setShowOtherType] = useState(false);
-  const [showMoreMain, setShowMoreMain] = useState(false);
+  const [showMoreMain, setShowMoreMain] = useState<3 | 6 | 9>(3);
 
 
 
@@ -629,7 +629,7 @@ export default function ResultsPage() {
 
 
 
-        {rankedCards.slice(0, showMoreMain ? 6 : 3).map(card => {
+        {rankedCards.slice(0, showMoreMain).map(card => {
           const style = getIssuerStyle(card.issuer);
           const bonusDisplay = formatBonusDisplay(card);
 
@@ -714,7 +714,7 @@ export default function ResultsPage() {
                       )
                     }
                   />{" "}
-                  I already have this
+                  I already have this, or I am not interested
                 </label>
               </div>
 
@@ -818,21 +818,70 @@ export default function ResultsPage() {
 
         {rankedCards.length > 3 && (
           <div style={{ marginBottom: 24 }}>
-            <button
-              onClick={() => setShowMoreMain(prev => !prev)}
-              style={{
-                padding: "10px 18px",
-                borderRadius: 999,
-                border: "1px solid #c7d2fe",
-                background: "#eef2ff",
-                color: "#1e3a8a",
-                fontWeight: 600
-              }}
-            >
-              {showMoreMain
-                ? "Hide extra recommendations"
-                : "Show more recommendations"}
-            </button>
+            {showMoreMain === 3 && rankedCards.length > 3 && (
+              <button
+                onClick={() => setShowMoreMain(6)}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 999,
+                  border: "1px solid #c7d2fe",
+                  background: "#eef2ff",
+                  color: "#1e3a8a",
+                  fontWeight: 600,
+                  marginRight: 12
+                }}
+              >
+                Show 3 more recommendations
+              </button>
+            )}
+            {showMoreMain === 6 && (
+              <>
+                {rankedCards.length > 6 && (
+                  <button
+                    onClick={() => setShowMoreMain(9)}
+                    style={{
+                      padding: "10px 18px",
+                      borderRadius: 999,
+                      border: "1px solid #c7d2fe",
+                      background: "#eef2ff",
+                      color: "#1e3a8a",
+                      fontWeight: 600,
+                      marginRight: 12
+                    }}
+                  >
+                    Show 3 more recommendations
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowMoreMain(3)}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: 999,
+                    border: "1px solid #c7d2fe",
+                    background: "#eef2ff",
+                    color: "#1e3a8a",
+                    fontWeight: 600
+                  }}
+                >
+                  Hide extra recommendations
+                </button>
+              </>
+            )}
+            {showMoreMain === 9 && (
+              <button
+                onClick={() => setShowMoreMain(3)}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 999,
+                  border: "1px solid #c7d2fe",
+                  background: "#eef2ff",
+                  color: "#1e3a8a",
+                  fontWeight: 600
+                }}
+              >
+                Hide extra recommendations
+              </button>
+            )}
           </div>
         )}
 
@@ -962,7 +1011,7 @@ export default function ResultsPage() {
                           )
                         }
                       />{" "}
-                      I already have this
+                      I already have this, or I am not interested
                     </label>
                   </div>
 

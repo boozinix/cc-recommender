@@ -96,6 +96,15 @@ export default function Wizard() {
   const isRankingStep = currentQuestion.id === "primary_goal";
   const selectedValue = answers[currentQuestion.id];
 
+  // Color theme: blue for personal, pink for business
+  const primaryColor = cardMode === "business" ? "#ec4899" : "#2563eb";
+  const primaryColorLight = cardMode === "business" ? "#fce7f3" : "#eef2ff";
+  const primaryColorLighter = cardMode === "business" ? "#fbcfe8" : "#c7d2fe";
+  const primaryColorDark = cardMode === "business" ? "#be185d" : "#1e3a8a";
+  const backgroundGradient = cardMode === "business" 
+    ? "radial-gradient(circle at top, #fce7f3, #ffffff)"
+    : "radial-gradient(circle at top, #eef2ff, #ffffff)";
+
 
 
 
@@ -258,7 +267,7 @@ export default function Wizard() {
         alignItems: "center",
         padding: "0 20px",
         fontFamily: "system-ui",
-        background: "radial-gradient(circle at top, #eef2ff, #ffffff)"
+        background: backgroundGradient
       }}
     >
       <style>{fadeInStyle}</style>
@@ -277,9 +286,9 @@ export default function Wizard() {
             style={{
               padding: "10px 20px",
               borderRadius: 999,
-              border: "2px solid #2563eb",
-              background: cardMode === mode ? "#2563eb" : "#fff",
-              color: cardMode === mode ? "#fff" : "#2563eb",
+              border: `2px solid ${primaryColor}`,
+              background: cardMode === mode ? primaryColor : "#fff",
+              color: cardMode === mode ? "#fff" : primaryColor,
               fontWeight: 600,
               cursor: "pointer"
             }}
@@ -311,7 +320,7 @@ export default function Wizard() {
               style={{
                 height: 6,
                 width: `${((step + 1) / questions.length) * 100}%`,
-                background: "#2563eb",
+                background: primaryColor,
                 borderRadius: 4
               }}
             />
@@ -374,10 +383,10 @@ export default function Wizard() {
                         padding: "14px 18px",
                         borderRadius: 10,
                         border: isDropTarget 
-                          ? "2px solid #2563eb" 
-                          : "2px solid #c7d2fe",
+                          ? `2px solid ${primaryColor}` 
+                          : `2px solid ${primaryColorLighter}`,
                         background: isDropTarget 
-                          ? "#eef2ff" 
+                          ? primaryColorLight 
                           : "#ffffff",
                         display: "flex",
                         justifyContent: "space-between",
@@ -445,11 +454,11 @@ export default function Wizard() {
                     borderRadius: 10,
                     border:
                       answers[currentQuestion.id] === option.value
-                        ? "2px solid #2563eb"
+                        ? `2px solid ${primaryColor}`
                         : "2px solid #ccc",
                     background:
                       answers[currentQuestion.id] === option.value
-                        ? "#eef2ff"
+                        ? primaryColorLight
                         : "#ffffff",
                     cursor: "pointer"
                   }}
@@ -496,7 +505,7 @@ export default function Wizard() {
                 padding: "12px 24px",
                 borderRadius: 999,
                 background:
-                  !isRankingStep && !selectedValue ? "#c7d2fe" : "#2563eb",
+                  !isRankingStep && !selectedValue ? primaryColorLighter : primaryColor,
                 color: "#ffffff",
                 border: "none",
                 fontWeight: 600,
