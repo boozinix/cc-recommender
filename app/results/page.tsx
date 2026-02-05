@@ -158,16 +158,23 @@ function issuerExcluded(issuer: string, cards24mo: string) {
 
 function formatBonusDisplay(card: Card) {
   const value = parseInt(card.estimated_bonus_value_usd || "0", 10);
-  const valueText = value ? `$${value.toLocaleString()} estimated value` : "";
-  const rawBonus = card.signup_bonus?.trim();
+  if (!value) return null;
 
-
-  if (valueText && rawBonus) {
-    return `${valueText} • ${rawBonus}`;
+  const bonusType = card.signup_bonus_type?.toLowerCase() || "";
+  let typeLabel = "";
+  
+  if (bonusType === "miles") {
+    typeLabel = "miles";
+  } else if (bonusType === "points") {
+    typeLabel = "points";
+  } else if (bonusType === "dollars") {
+    typeLabel = "dollars";
+  } else {
+    // Fallback if type is missing or unknown
+    typeLabel = bonusType || "rewards";
   }
-  if (valueText) return valueText;
-  if (rawBonus) return rawBonus;
-  return null;
+
+  return `Worth $${value.toLocaleString()} estimated value in ${typeLabel}`;
 }
 
 
