@@ -60,3 +60,7 @@ I'll always:
 ## Your Safety Net
 
 Every time I make changes, I'll create a "checkpoint" (git commit). Think of it like saving a game - you can always go back to a previous save point!
+
+## Running Experiments
+
+If you're about to run **experiments** (e.g. on scoring logic), the current code is **locked in** with a tag and an experiments branch. See **EXPERIMENTS.md** for the full workflow: how to experiment safely and how to revert to the locked baseline.
