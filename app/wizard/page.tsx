@@ -128,10 +128,17 @@ export default function Wizard() {
         return {
           question: q.question,
           answer: getAnswerDisplay(q.id, answer),
-          stepNumber: idx + 1
+          stepNumber: idx + 1,
+          stepIndex: idx // 0-based index for navigation
         };
       }).filter(item => item.answer) // Only show if answered
     : [];
+
+  // Handle clicking on a previous answer to jump back to that question
+  function handleJumpToQuestion(targetStepIndex: number) {
+    setStep(targetStepIndex);
+    localStorage.setItem("wizard_step", targetStepIndex.toString());
+  }
 
   // Color theme: blue for personal, pink for business
   const primaryColor = cardMode === "business" ? "#ec4899" : "#2563eb";
@@ -392,19 +399,43 @@ export default function Wizard() {
             {previousAnswers.map((item, idx) => (
               <div
                 key={idx}
+                onClick={() => handleJumpToQuestion(item.stepIndex)}
                 style={{
                   fontSize: 13,
                   color: "#1e293b",
-                  padding: "6px 10px",
+                  padding: "8px 12px",
                   background: primaryColorLight,
                   borderRadius: 6,
-                  textAlign: "left"
+                  textAlign: "left",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  border: `1px solid ${primaryColorLighter}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = primaryColor;
+                  e.currentTarget.style.borderColor = primaryColor;
+                  e.currentTarget.style.transform = "translateX(4px)";
+                  e.currentTarget.style.boxShadow = `0 2px 8px ${primaryColor}40`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = primaryColorLight;
+                  e.currentTarget.style.borderColor = primaryColorLighter;
+                  e.currentTarget.style.transform = "translateX(0)";
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                <span style={{ fontWeight: 600, color: primaryColor }}>
-                  Q{item.stepNumber}:
-                </span>{" "}
-                <span style={{ color: "#475569" }}>{item.answer}</span>
+                <div>
+                  <span style={{ fontWeight: 600, color: primaryColor }}>
+                    Q{item.stepNumber}:
+                  </span>{" "}
+                  <span style={{ color: "#475569" }}>{item.answer}</span>
+                </div>
+                <span style={{ fontSize: 11, opacity: 0.6, marginLeft: 8 }}>
+                  ←
+                </span>
               </div>
             ))}
           </div>
