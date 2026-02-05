@@ -6,14 +6,15 @@ This guide explains how the code is **locked in** and how to run **experiments**
 
 ## What’s Locked In Right Now
 
-Your current “known good” state is saved in two ways:
+### Git tag: `v0.2` (current checkpoint — use this for UI work)
+- **Tag:** `v0.2`
+- **Meaning:** Scoring, refinements, travel tier, alternate-list brand priority, and UI phrasing are done. Good stopping point before UI improvements.
+- **To return here:** `git checkout v0.2` or `git reset --hard v0.2` (on a branch).
 
-### 1. Git tag: `baseline-before-experiments`
-- A **tag** is a named snapshot of the code at a specific point in time.
-- This tag = the code **before** any scoring/UX experiments.
-- You can always return to this exact state.
+### Other tags
+- **`baseline-before-experiments`** – Code before any scoring/UX experiments (earlier snapshot).
 
-### 2. Branch: `main`
+### Branch: `main`
 - `main` is your main branch. Right now it has the same code as the tag above.
 - After experiments, you can either keep results on `main` or merge from a branch.
 
