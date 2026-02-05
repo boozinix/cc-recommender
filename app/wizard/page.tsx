@@ -161,22 +161,46 @@ export default function Wizard() {
   // -----------------------
   // Drag & Drop Handlers
   // -----------------------
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
   function handleDragStart(e: React.DragEvent<HTMLDivElement>, index: number) {
     e.dataTransfer.setData("dragIndex", index.toString());
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedIndex(index);
   }
 
+  function handleDragEnd() {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>, index: number) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIndex(index);
+  }
+
+  function handleDragLeave() {
+    setDragOverIndex(null);
+  }
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>, dropIndex: number) {
+    e.preventDefault();
     const dragIndex = parseInt(e.dataTransfer.getData("dragIndex"), 10);
-    if (dragIndex === dropIndex) return;
-
+    if (dragIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
 
     const updated = [...rankedGoals];
     const [moved] = updated.splice(dragIndex, 1);
     updated.splice(dropIndex, 0, moved);
 
-
     setRankedGoals(updated);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   }
 
 
@@ -326,35 +350,76 @@ export default function Wizard() {
               Ranking Question
              ======================= */}
           {isRankingStep && (
-            <div style={{ display: "grid", gap: 12 }}>
-              {rankedGoals.map((goal, index) => {
-                const label =
-                  questions[0].options.find(o => o.value === goal)?.label;
+            <>
+              <div style={{ fontSize: 14, color: "#475569", marginBottom: 16, textAlign: "left" }}>
+                💡 Drag and drop to reorder your priorities
+              </div>
+              <div style={{ display: "grid", gap: 12 }}>
+                {rankedGoals.map((goal, index) => {
+                  const label =
+                    questions[0].options.find(o => o.value === goal)?.label;
+                  const isDragging = draggedIndex === index;
+                  const isDropTarget = dragOverIndex === index && draggedIndex !== index;
 
-
-                return (
-                  <div
-                    key={goal}
-                    draggable
-                    onDragStart={e => handleDragStart(e, index)}
-                    onDragOver={e => e.preventDefault()}
-                    onDrop={e => handleDrop(e, index)}
-                    style={{
-                      padding: "14px 18px",
-                      borderRadius: 10,
-                      border: "2px solid #c7d2fe",
-                      background: "#ffffff",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      cursor: "grab"
-                    }}
-                  >
-                    {index + 1}. {label}
-                  </div>
-                );
-              })}
-            </div>
+                  return (
+                    <div
+                      key={goal}
+                      draggable
+                      onDragStart={e => handleDragStart(e, index)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={e => handleDragOver(e, index)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={e => handleDrop(e, index)}
+                      style={{
+                        padding: "14px 18px",
+                        borderRadius: 10,
+                        border: isDropTarget 
+                          ? "2px solid #2563eb" 
+                          : "2px solid #c7d2fe",
+                        background: isDropTarget 
+                          ? "#eef2ff" 
+                          : "#ffffff",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        cursor: isDragging ? "grabbing" : "grab",
+                        opacity: isDragging ? 0.5 : 1,
+                        transform: isDragging ? "scale(1.02)" : "scale(1)",
+                        transition: "all 0.2s ease",
+                        boxShadow: isDragging 
+                          ? "0 8px 16px rgba(0,0,0,0.15)" 
+                          : "0 2px 4px rgba(0,0,0,0.05)",
+                        userSelect: "none"
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isDragging) {
+                          e.currentTarget.style.transform = "scale(1.02)";
+                          e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.1)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isDragging) {
+                          e.currentTarget.style.transform = "scale(1)";
+                          e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
+                        }
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{ 
+                          fontSize: 18, 
+                          color: "#94a3b8",
+                          cursor: "grab",
+                          lineHeight: 1
+                        }}>
+                          ⋮⋮
+                        </span>
+                        <span>{index + 1}. {label}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
 
 
