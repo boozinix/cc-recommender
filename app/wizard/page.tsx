@@ -96,6 +96,38 @@ export default function Wizard() {
   const isRankingStep = currentQuestion.id === "primary_goal";
   const selectedValue = answers[currentQuestion.id];
 
+  // Helper function to get answer display text
+  function getAnswerDisplay(questionId: string, answerValue: any): string {
+    const question = questions.find(q => q.id === questionId);
+    if (!question) return "";
+    
+    if (questionId === "primary_goal" && Array.isArray(answerValue)) {
+      // For ranked goals, show top 2
+      const top2 = answerValue.slice(0, 2);
+      return top2.map((val: string, idx: number) => {
+        const option = question.options.find(o => o.value === val);
+        return `${idx + 1}. ${option?.label || val}`;
+      }).join(" • ");
+    }
+    
+    const option = question.options.find(o => o.value === answerValue);
+    return option?.label || answerValue || "";
+  }
+
+  // Get previous answers for display (only show if step > 0)
+  const previousAnswers = step > 0 
+    ? questions.slice(0, step).map((q, idx) => {
+        const answer = q.id === "primary_goal" 
+          ? answers.primary_goal_ranked 
+          : answers[q.id];
+        return {
+          question: q.question,
+          answer: getAnswerDisplay(q.id, answer),
+          stepNumber: idx + 1
+        };
+      }).filter(item => item.answer) // Only show if answered
+    : [];
+
   // Color theme: blue for personal, pink for business
   const primaryColor = cardMode === "business" ? "#ec4899" : "#2563eb";
   const primaryColorLight = cardMode === "business" ? "#fce7f3" : "#eef2ff";
@@ -330,6 +362,49 @@ export default function Wizard() {
 
 
 
+
+      {/* =======================
+          Previous Answers Summary (Floating)
+         ======================= */}
+      {cardMode && step > 0 && previousAnswers.length > 0 && (
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 420,
+            marginBottom: 20,
+            padding: "12px 16px",
+            background: "#ffffff",
+            borderRadius: 12,
+            border: `1px solid ${primaryColorLighter}`,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            animation: "fadeIn 0.3s ease"
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>
+            Your answers so far:
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {previousAnswers.map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  fontSize: 13,
+                  color: "#1e293b",
+                  padding: "6px 10px",
+                  background: primaryColorLight,
+                  borderRadius: 6,
+                  textAlign: "left"
+                }}
+              >
+                <span style={{ fontWeight: 600, color: primaryColor }}>
+                  Q{item.stepNumber}:
+                </span>{" "}
+                <span style={{ color: "#475569" }}>{item.answer}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {cardMode && (
         <div
