@@ -236,73 +236,116 @@ function selectTopBrandOnly(
 
 
 // =========================================================
-// Scoring Engine
+// Scoring Engine - Restructured for Better Logic
 // =========================================================
 function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
+  // =========================================================
+  // STEP 1: Hard Exclusions (immediate disqualification)
+  // =========================================================
   if (ownedCards.includes(card.card_name)) return -9999;
   if (issuerExcluded(card.issuer, answers.cards_24mo)) return -9999;
 
-
   const { primary, secondary } = getGoalRanks(answers);
-
+  const cardFee = parseInt(card.annual_fee || "0", 10);
+  const bonusValue = parseInt(card.estimated_bonus_value_usd || "0", 10);
+  const cashbackRate = parseFloat(card.cashback_rate_effective || "0");
+  const isTravelCard = card.reward_model.toLowerCase() === "travel";
+  const isCashbackCard = card.reward_model.toLowerCase() === "cashback";
 
   let score = 0;
 
-
-  // 0% APR scenario
+  // =========================================================
+  // STEP 2: Special Case - 0% APR Requirement
+  // =========================================================
   if (
     answers.needs_0_apr === "Yes, I plan to carry a balance" &&
     primary !== "Travel"
   ) {
     if (!hasIntroAPR(card)) return -9999;
-    score += parseFloat(card.cashback_rate_effective || "0") * 10;
-    score -= parseInt(card.annual_fee || "0", 10) / 10;
+    // For 0% APR seekers, prioritize cashback rate and low/no fees
+    score += cashbackRate * 10;
+    score -= cardFee / 10;
     return score;
   }
 
+  // =========================================================
+  // STEP 3: Annual Fee Tolerance Filtering
+  // =========================================================
+  const feeTolerance = answers.annual_fee_tolerance;
+  if (feeTolerance === "None" && cardFee > 0) {
+    // User wants no fee - heavily penalize cards with fees
+    score -= 50;
+  } else if (feeTolerance === "Low" && cardFee > 100) {
+    // User wants low fee - penalize cards over $100
+    score -= 30;
+  } else if (feeTolerance === "Medium" && cardFee > 400) {
+    // User wants medium fee - penalize cards over $400
+    score -= 30;
+  }
+  // "High" tolerance means no penalty
 
-  // Primary goal weighting
+  // =========================================================
+  // STEP 4: Primary Goal Scoring (Highest Weight)
+  // =========================================================
   if (primary === "Travel") {
-    score += card.reward_model.toLowerCase() === "travel" ? 60 : -25;
-  }
-  if (primary === "Cashback") {
-    score += card.reward_model.toLowerCase() === "cashback" ? 40 : 0;
-  }
-  if (primary === "Everyday") {
-    score += parseFloat(card.cashback_rate_effective || "0") * 8;
-  }
-  if (primary === "Bonus") {
-    score += Math.min(
-      parseInt(card.estimated_bonus_value_usd || "0", 10) / 50,
-      40
-    );
+    if (isTravelCard) {
+      score += 60;
+      // Boost for travel frequency
+      if (answers.travel_frequency === "High") score += 15;
+      else if (answers.travel_frequency === "Medium") score += 8;
+      else if (answers.travel_frequency === "Low") score -= 10; // Penalize if rarely travel
+    } else {
+      score -= 25; // Penalize non-travel cards
+    }
+  } else if (primary === "Cashback") {
+    if (isCashbackCard) {
+      score += 40;
+    }
+    // No penalty for non-cashback if not primary
+  } else if (primary === "Everyday") {
+    // Everyday spending = prioritize cashback rate
+    score += cashbackRate * 8;
+  } else if (primary === "Bonus") {
+    // Only prioritize bonus if user is comfortable with spending
+    if (answers.spend_comfort !== "None") {
+      score += Math.min(bonusValue / 50, 40);
+    } else {
+      // User doesn't want bonus - penalize bonus-focused cards
+      score -= 20;
+    }
   }
 
-
-  // Secondary goal weighting (smaller)
+  // =========================================================
+  // STEP 5: Secondary Goal Scoring (Medium Weight)
+  // =========================================================
   if (secondary === "Travel") {
-    score += card.reward_model.toLowerCase() === "travel" ? 25 : -10;
-  }
-  if (secondary === "Cashback") {
-    score += card.reward_model.toLowerCase() === "cashback" ? 15 : 0;
-  }
-  if (secondary === "Everyday") {
-    score += parseFloat(card.cashback_rate_effective || "0") * 3;
-  }
-  if (secondary === "Bonus") {
-    score += Math.min(
-      parseInt(card.estimated_bonus_value_usd || "0", 10) / 100,
-      15
-    );
+    if (isTravelCard) {
+      score += 25;
+      // Smaller boost for travel frequency
+      if (answers.travel_frequency === "High") score += 8;
+      else if (answers.travel_frequency === "Low") score -= 5;
+    } else {
+      score -= 10;
+    }
+  } else if (secondary === "Cashback") {
+    if (isCashbackCard) {
+      score += 15;
+    }
+  } else if (secondary === "Everyday") {
+    score += cashbackRate * 3;
+  } else if (secondary === "Bonus") {
+    if (answers.spend_comfort !== "None") {
+      score += Math.min(bonusValue / 100, 15);
+    }
   }
 
-
-  // Travel sub-preferences (weights only; brand selection handled later)
-  const caresAboutTravel =
-    primary === "Travel" || secondary === "Travel";
-
-
+  // =========================================================
+  // STEP 6: Travel-Specific Preferences
+  // =========================================================
+  const caresAboutTravel = primary === "Travel" || secondary === "Travel";
+  
   if (caresAboutTravel) {
+    // Airline preference matching
     if (
       answers.preferred_airline &&
       answers.preferred_airline !== "No strong preference" &&
@@ -311,7 +354,7 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
       score += 40;
     }
 
-
+    // Hotel preference matching
     if (
       answers.preferred_hotel &&
       answers.preferred_hotel !== "No strong preference" &&
@@ -321,13 +364,26 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
     }
   }
 
+  // =========================================================
+  // STEP 7: Baseline Bonus Value (if user wants bonuses)
+  // =========================================================
+  if (answers.spend_comfort !== "None") {
+    score += Math.min(bonusValue / 100, 20);
+  } else {
+    // User doesn't want bonus - small penalty for high bonus cards
+    if (bonusValue > 500) score -= 5;
+  }
 
-  // Baseline signup bonus value
-  score += Math.min(
-    parseInt(card.estimated_bonus_value_usd || "0", 10) / 100,
-    20
-  );
-
+  // =========================================================
+  // STEP 8: Annual Fee Value Adjustment
+  // =========================================================
+  // If card has annual fee, ensure it's justified by other benefits
+  if (cardFee > 0) {
+    // Small penalty for high fees relative to benefits
+    if (cardFee > 400 && score < 50) {
+      score -= 10; // High fee card with low overall score
+    }
+  }
 
   return score;
 }
