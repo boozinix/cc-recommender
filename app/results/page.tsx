@@ -80,7 +80,7 @@ const bankLogoFiles: Record<string, string> = {
   "Bank of America": "bank-of-america.svg",
   "Amex": "american-express.svg",
   "Barclays": "barclays.jpeg",
-  "U.S. Bank": "us-bank.svg",
+  "U.S. Bank": "usbank.png",
   "Wells Fargo": "wellsfargo.jpg"
 };
 
@@ -987,23 +987,16 @@ export default function ResultsPage() {
   // UI
   // =========================================================
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "360px 1fr",
-        gap: 40,
-        padding: 40,
-        background: "#f8fafc"
-      }}
-    >
+    <div className="results-page">
 
 
 
       {/* LEFT PANEL – own scroll when content is tall */}
-      <div style={{ background: "#ffffff", borderRadius: 12, padding: 20, maxHeight: "calc(100vh - 80px)", overflowY: "auto" }}>
+      <div className="results-left" style={{ background: "#ffffff", borderRadius: 12, padding: 20 }}>
 
         <a
           href="/"
+          className="results-tap-target"
           onClick={(e) => {
             e.preventDefault();
             localStorage.removeItem("answers");
@@ -1012,7 +1005,8 @@ export default function ResultsPage() {
             window.location.href = "/";
           }}
           style={{
-            display: "inline-block",
+            display: "inline-flex",
+            alignItems: "center",
             marginBottom: 20,
             padding: "10px 18px",
             borderRadius: 8,
@@ -1033,6 +1027,7 @@ export default function ResultsPage() {
             <button
               key={mode}
               type="button"
+              className="results-tap-target"
               onClick={() => {
                 setAnswers(prev => ({ ...prev, card_mode: mode }));
                 if (typeof localStorage !== "undefined") {
@@ -1265,7 +1260,7 @@ export default function ResultsPage() {
 
 
       {/* RIGHT PANEL */}
-      <div>
+      <div className="results-right">
         {ENABLE_CARD_ANIMATIONS && (
           <style dangerouslySetInnerHTML={{ __html: `
             @keyframes cardEnter {
@@ -1391,7 +1386,7 @@ export default function ResultsPage() {
                   </p>
                 )}
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                <div className="results-card-pros-cons">
                   {card.pros && (
                     <div style={{ background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
                       <div style={{ fontWeight: 600, fontSize: 11, color: "#0f766e", marginBottom: 4 }}>Pros</div>
@@ -1567,7 +1562,7 @@ export default function ResultsPage() {
                     {card.best_for}
                   </p>
                 )}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                <div className="results-card-pros-cons">
                   {card.pros && (
                     <div style={{ background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
                       <div style={{ fontWeight: 600, fontSize: 11, color: "#0f766e", marginBottom: 4 }}>Pros</div>
@@ -1843,7 +1838,7 @@ export default function ResultsPage() {
                     </div>
                     {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "#0c4a6e", background: "#e0f2fe", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
                     {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "#64748b", lineHeight: 1.4 }}>{card.best_for}</p>}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                    <div className="results-card-pros-cons">
                       {card.pros && (
                         <div style={{ background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
                           <div style={{ fontWeight: 600, fontSize: 11, color: "#0f766e", marginBottom: 4 }}>Pros</div>
@@ -1975,7 +1970,7 @@ export default function ResultsPage() {
                       </div>
                     {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "#0c4a6e", background: "#e0f2fe", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
                     {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "#64748b", lineHeight: 1.4 }}>{card.best_for}</p>}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                    <div className="results-card-pros-cons">
                       {card.pros && (
                         <div style={{ background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
                           <div style={{ fontWeight: 600, fontSize: 11, color: "#0f766e", marginBottom: 4 }}>Pros</div>
