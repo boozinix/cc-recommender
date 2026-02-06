@@ -6,13 +6,17 @@ This guide explains how the code is **locked in** and how to run **experiments**
 
 ## What’s Locked In Right Now
 
-### Git tag: `v0.5` (current checkpoint)
-- **Tag:** `v0.5`
-- **Meaning:** Issuer approval rules as one multi-select question (5+/6+ in 24mo, 2+ in 60/90 days); checkboxes exclude Chase, Barclays, Citi, Amex per rule. Replaces single “how many cards in 24 months” question. Multi-select refinement UI. (Also includes v0.4: bonus ratio, spend-in-months, Expected cashback, Exclude travel cards, left-panel polish.)
+### Git tag: `v0.7` (current checkpoint)
+- **Tag:** `v0.7`
+- **Meaning:** Comparison page. Includes: (1) Compare checkboxes on results tiles (2–4 cards); (2) New `/comparison` page with table: Name, Personal/Business, Bank, Rewards (airline/hotel brand or General), Bank rules, Intro APR, Sign-up bonus, Spending requirements, Pros (green), Cons (red); (3) `bank_rules` column added to cards.csv (blank for now); (4) Compare button moved below Show more/Hide; (5) Add to compare pill at bottom of each card tile; (6) Polished table styling (zebra striping, hover, gradient header). Builds on v0.6.
 
-- **To return here:** `git checkout v0.5` or `git reset --hard v0.5` (on a branch).
+- **To return here:** `git checkout v0.7` or `git reset --hard v0.7` (on a branch).
+
+- **To lock current code as v0.7:** Commit your changes, then run: `git tag v0.7` (and optionally `git push origin v0.7` if you use a remote).
 
 ### Other tags
+- **`v0.6`** – Text prompt on homepage; prompt robustness; no-match handling; travel type filtering; BoA/Wells Fargo last; wizard Q1 Back; left panel scroll; animation toggle; hotel brand filter.
+- **`v0.5`** – Issuer approval rules multi-select; refinement UI; bonus ratio, Exclude travel cards, left-panel polish.
 - **`v0.4`** – Bonus ratio, spend-in-months display, Expected cashback, Exclude travel cards, left-panel polish.
 - **`v0.3`** – Bank + brand logos, unified card layout; before bonus ratio and left-panel polish.
 - **`v0.2`** – Scoring, refinements, travel tier, alternate-list brand priority, UI phrasing; before logo work.

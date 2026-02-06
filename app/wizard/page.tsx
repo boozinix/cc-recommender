@@ -4,7 +4,9 @@
 // =======================
 // Imports
 // =======================
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getTheme } from "@/app/lib/theme";
 
 
 
@@ -78,7 +80,7 @@ export default function Wizard() {
   // -----------------------
   // State
   // -----------------------
-  const [cardMode, setCardMode] = useState<"personal" | "business" | null>(null);
+  const [cardMode, setCardMode] = useState<"personal" | "business">("personal");
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<any>({});
 
@@ -131,14 +133,8 @@ export default function Wizard() {
     localStorage.setItem("wizard_step", targetStepIndex.toString());
   }
 
-  // Color theme: blue for personal, pink for business
-  const primaryColor = cardMode === "business" ? "#ec4899" : "#2563eb";
-  const primaryColorLight = cardMode === "business" ? "#fce7f3" : "#eef2ff";
-  const primaryColorLighter = cardMode === "business" ? "#fbcfe8" : "#c7d2fe";
-  const primaryColorDark = cardMode === "business" ? "#be185d" : "#1e3a8a";
-  const backgroundGradient = cardMode === "business" 
-    ? "radial-gradient(circle at top, #fce7f3, #ffffff)"
-    : "radial-gradient(circle at top, #eef2ff, #ffffff)";
+  // Theme from shared app/lib/theme.ts – change business/personal scheme there to apply everywhere
+  const theme = getTheme(cardMode);
 
 
 
@@ -154,6 +150,8 @@ export default function Wizard() {
 
       if (storedMode === "personal" || storedMode === "business") {
         setCardMode(storedMode);
+      } else {
+        localStorage.setItem("card_mode", "personal");
       }
 
       if (storedAnswers) {
@@ -210,6 +208,7 @@ export default function Wizard() {
 
   function handleDragStart(e: React.DragEvent<HTMLDivElement>, index: number) {
     e.dataTransfer.setData("dragIndex", index.toString());
+    e.dataTransfer.setData("text/plain", index.toString()); // helps some browsers
     e.dataTransfer.effectAllowed = "move";
     setDraggedIndex(index);
   }
@@ -247,6 +246,14 @@ export default function Wizard() {
     setDragOverIndex(null);
   }
 
+  function moveRank(index: number, direction: "up" | "down") {
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= rankedGoals.length) return;
+    const updated = [...rankedGoals];
+    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+    setRankedGoals(updated);
+  }
+
 
 
 
@@ -278,12 +285,16 @@ export default function Wizard() {
   }
 
 
+  const router = useRouter();
+
   function handleBack() {
-    if (step > 0) {
-      const prevStep = step - 1;
-      setStep(prevStep);
-      localStorage.setItem("wizard_step", prevStep.toString());
+    if (step === 0) {
+      router.push("/");
+      return;
     }
+    const prevStep = step - 1;
+    setStep(prevStep);
+    localStorage.setItem("wizard_step", prevStep.toString());
   }
 
 
@@ -302,7 +313,7 @@ export default function Wizard() {
         alignItems: "center",
         padding: "0 20px",
         fontFamily: "system-ui",
-        background: backgroundGradient
+        background: theme.backgroundGradient
       }}
     >
       <style>{fadeInStyle}</style>
@@ -321,9 +332,9 @@ export default function Wizard() {
             style={{
               padding: "10px 20px",
               borderRadius: 999,
-              border: `2px solid ${primaryColor}`,
-              background: cardMode === mode ? primaryColor : "#fff",
-              color: cardMode === mode ? "#fff" : primaryColor,
+              border: `2px solid ${theme.primary}`,
+              background: cardMode === mode ? theme.primary : "#fff",
+              color: cardMode === mode ? "#fff" : theme.primary,
               fontWeight: 600,
               cursor: "pointer"
             }}
@@ -336,40 +347,28 @@ export default function Wizard() {
 
 
 
-      {!cardMode && (
-        <div style={{ color: "#6b7280", marginBottom: 24 }}>
-          Select Personal or Business to begin.
+      <div style={{ width: 300, marginBottom: 24 }}>
+        <div style={{ fontSize: 14, marginBottom: 6 }}>
+          Step {step + 1} of {questions.length}
         </div>
-      )}
-
-
-
-
-      {cardMode && (
-        <div style={{ width: 300, marginBottom: 24 }}>
-          <div style={{ fontSize: 14, marginBottom: 6 }}>
-            Step {step + 1} of {questions.length}
-          </div>
-          <div style={{ height: 6, background: "#e5e7eb", borderRadius: 4 }}>
-            <div
-              style={{
-                height: 6,
-                width: `${((step + 1) / questions.length) * 100}%`,
-                background: primaryColor,
-                borderRadius: 4
-              }}
-            />
-          </div>
+        <div style={{ height: 6, background: "#e5e7eb", borderRadius: 4 }}>
+          <div
+            style={{
+              height: 6,
+              width: `${((step + 1) / questions.length) * 100}%`,
+              background: theme.primary,
+              borderRadius: 4
+            }}
+          />
         </div>
-      )}
-
+      </div>
 
 
 
       {/* =======================
           Previous Answers Summary (Floating)
          ======================= */}
-      {SHOW_PREVIOUS_ANSWERS && cardMode && step > 0 && previousAnswers.length > 0 && (
+      {SHOW_PREVIOUS_ANSWERS && step > 0 && previousAnswers.length > 0 && (
         <div
           style={{
             width: "100%",
@@ -378,7 +377,7 @@ export default function Wizard() {
             padding: "12px 16px",
             background: "#ffffff",
             borderRadius: 12,
-            border: `1px solid ${primaryColorLighter}`,
+            border: `1px solid ${theme.primaryLighter}`,
             boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
             animation: "fadeIn 0.3s ease"
           }}
@@ -395,31 +394,31 @@ export default function Wizard() {
                   fontSize: 13,
                   color: "#1e293b",
                   padding: "8px 12px",
-                  background: primaryColorLight,
+                  background: theme.primaryLight,
                   borderRadius: 6,
                   textAlign: "left",
                   cursor: "pointer",
                   transition: "all 0.2s ease",
-                  border: `1px solid ${primaryColorLighter}`,
+                  border: `1px solid ${theme.primaryLighter}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between"
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = primaryColor;
-                  e.currentTarget.style.borderColor = primaryColor;
+                  e.currentTarget.style.background = theme.primary;
+                  e.currentTarget.style.borderColor = theme.primary;
                   e.currentTarget.style.transform = "translateX(4px)";
-                  e.currentTarget.style.boxShadow = `0 2px 8px ${primaryColor}40`;
+                  e.currentTarget.style.boxShadow = `0 2px 8px ${theme.primary}40`;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = primaryColorLight;
-                  e.currentTarget.style.borderColor = primaryColorLighter;
+                  e.currentTarget.style.background = theme.primaryLight;
+                  e.currentTarget.style.borderColor = theme.primaryLighter;
                   e.currentTarget.style.transform = "translateX(0)";
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
                 <div>
-                  <span style={{ fontWeight: 600, color: primaryColor }}>
+                  <span style={{ fontWeight: 600, color: theme.primary }}>
                     Q{item.stepNumber}:
                   </span>{" "}
                   <span style={{ color: "#475569" }}>{item.answer}</span>
@@ -463,7 +462,8 @@ export default function Wizard() {
           {isRankingStep && (
             <>
               <div style={{ fontSize: 14, color: "#475569", marginBottom: 16, textAlign: "left" }}>
-                💡 Drag and drop to reorder your priorities
+                💡 Drag a row to reorder
+                <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 8 }}>or use ↑↓ if needed</span>
               </div>
               <div style={{ display: "grid", gap: 12 }}>
                 {rankedGoals.map((goal, index) => {
@@ -471,6 +471,8 @@ export default function Wizard() {
                     questions[0].options.find(o => o.value === goal)?.label;
                   const isDragging = draggedIndex === index;
                   const isDropTarget = dragOverIndex === index && draggedIndex !== index;
+                  const canMoveUp = index > 0;
+                  const canMoveDown = index < rankedGoals.length - 1;
 
                   return (
                     <div
@@ -482,19 +484,18 @@ export default function Wizard() {
                       onDragLeave={handleDragLeave}
                       onDrop={e => handleDrop(e, index)}
                       style={{
-                        padding: "14px 18px",
+                        padding: 0,
                         borderRadius: 10,
                         border: isDropTarget 
-                          ? `2px solid ${primaryColor}` 
-                          : `2px solid ${primaryColorLighter}`,
+                          ? `2px solid ${theme.primary}` 
+                          : `2px solid ${theme.primaryLighter}`,
                         background: isDropTarget 
-                          ? primaryColorLight 
+                          ? theme.primaryLight 
                           : "#ffffff",
                         display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
+                        alignItems: "stretch",
                         cursor: isDragging ? "grabbing" : "grab",
-                        opacity: isDragging ? 0.5 : 1,
+                        opacity: isDragging ? 0.6 : 1,
                         transform: isDragging ? "scale(1.02)" : "scale(1)",
                         transition: "all 0.2s ease",
                         boxShadow: isDragging 
@@ -515,16 +516,66 @@ export default function Wizard() {
                         }
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ 
-                          fontSize: 18, 
-                          color: "#94a3b8",
+                      {/* Big drag handle – easy to grab, full height */}
+                      <div
+                        style={{
+                          width: 44,
+                          minWidth: 44,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: "rgba(0,0,0,0.04)",
+                          borderRight: "1px solid #e2e8f0",
+                          borderRadius: "8px 0 0 8px",
                           cursor: "grab",
-                          lineHeight: 1
-                        }}>
-                          ⋮⋮
-                        </span>
+                          flexShrink: 0
+                        }}
+                        title="Drag to reorder"
+                      >
+                        <span style={{ fontSize: 18, color: "#64748b", lineHeight: 1 }}>⋮⋮</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0, padding: "14px 14px 14px 16px" }}>
                         <span>{index + 1}. {label}</span>
+                        <div
+                          style={{ display: "flex", gap: 4, flexShrink: 0 }}
+                          onClick={e => e.stopPropagation()}
+                          onPointerDown={e => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            aria-label="Move up"
+                            disabled={!canMoveUp}
+                            onClick={() => moveRank(index, "up")}
+                            style={{
+                              padding: "6px 8px",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: 6,
+                              background: canMoveUp ? "#f8fafc" : "#f1f5f9",
+                              color: canMoveUp ? "#64748b" : "#cbd5e1",
+                              cursor: canMoveUp ? "pointer" : "default",
+                              fontSize: 12
+                            }}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Move down"
+                            disabled={!canMoveDown}
+                            onClick={() => moveRank(index, "down")}
+                            style={{
+                              padding: "6px 8px",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: 6,
+                              background: canMoveDown ? "#f8fafc" : "#f1f5f9",
+                              color: canMoveDown ? "#64748b" : "#cbd5e1",
+                              cursor: canMoveDown ? "pointer" : "default",
+                              fontSize: 12
+                            }}
+                          >
+                            ↓
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -556,11 +607,11 @@ export default function Wizard() {
                     borderRadius: 10,
                     border:
                       answers[currentQuestion.id] === option.value
-                        ? `2px solid ${primaryColor}`
+                        ? `2px solid ${theme.primary}`
                         : "2px solid #ccc",
                     background:
                       answers[currentQuestion.id] === option.value
-                        ? primaryColorLight
+                        ? theme.primaryLight
                         : "#ffffff",
                     cursor: "pointer"
                   }}
@@ -586,14 +637,13 @@ export default function Wizard() {
           >
             <button
               onClick={handleBack}
-              disabled={step === 0}
               style={{
                 padding: "12px 20px",
                 borderRadius: 999,
-                background: step === 0 ? "#e5e7eb" : "#111827",
+                background: "#111827",
                 color: "#ffffff",
                 border: "none",
-                cursor: step === 0 ? "not-allowed" : "pointer"
+                cursor: "pointer"
               }}
             >
               ← Back
@@ -607,7 +657,7 @@ export default function Wizard() {
                 padding: "12px 24px",
                 borderRadius: 999,
                 background:
-                  !isRankingStep && !selectedValue ? primaryColorLighter : primaryColor,
+                  !isRankingStep && !selectedValue ? theme.primaryLighter : theme.primary,
                 color: "#ffffff",
                 border: "none",
                 fontWeight: 600,
