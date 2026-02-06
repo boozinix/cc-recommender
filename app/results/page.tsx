@@ -179,17 +179,6 @@ function getInitialAnswerDisplay(questionId: string, answerValue: unknown): stri
 // Same schema as wizard: id, question, optional helper, options: { value, label }[]
 const refinementQuestions = [
   {
-    id: "cards_24mo",
-    question: "How many credit cards have you opened in the last 24 months?",
-    dependsOn: () => true,
-    options: [
-      { value: "0–4", label: "0–4" },
-      { value: "5", label: "5" },
-      { value: "6", label: "6" },
-      { value: "7+", label: "7+" }
-    ]
-  },
-  {
     id: "travel_rewards_type",
     question: "What kind of travel rewards do you prefer?",
     dependsOn: (answers: Answers) => {
@@ -270,6 +259,19 @@ const refinementQuestions = [
       { value: "No", label: "No, include travel cards" },
       { value: "Yes", label: "Yes, exclude all travel cards" }
     ]
+  },
+  {
+    id: "issuer_approval_rules",
+    question: "Do any of these approval rules apply to you?",
+    helper: "Select all that apply. We’ll exclude cards from issuers that may not approve you.",
+    dependsOn: () => true,
+    multiSelect: true,
+    options: [
+      { value: "5_in_24mo", label: "5+ cards in 24 months (exclude Chase)" },
+      { value: "6_in_24mo", label: "6+ cards in 24 months (exclude Chase & Barclays)" },
+      { value: "2_in_60_days", label: "2+ cards in 60 days (exclude Citi & Amex)" },
+      { value: "2_in_90_days", label: "2+ cards in 90 days (exclude Amex)" }
+    ]
   }
 ];
 
@@ -286,11 +288,14 @@ function hasIntroAPR(card: Card) {
 
 
 
-function issuerExcluded(issuer: string, cards24mo: string) {
+/** Exclude issuer based on selected approval rules (one question, multi-select). */
+function issuerExcluded(issuer: string, answers: Answers): boolean {
+  const rules: string[] = Array.isArray(answers.issuer_approval_rules) ? answers.issuer_approval_rules : [];
   const i = issuer.toLowerCase();
-  if (cards24mo === "5") return i === "chase";
-  if (cards24mo === "6") return i === "chase" || i === "citi";
-  if (cards24mo === "7+") return i === "chase" || i === "citi" || i === "amex";
+  if (rules.includes("5_in_24mo") && i === "chase") return true;
+  if (rules.includes("6_in_24mo") && (i === "chase" || i === "barclays")) return true;
+  if (rules.includes("2_in_60_days") && (i === "citi" || i === "amex")) return true;
+  if (rules.includes("2_in_90_days") && i === "amex") return true;
   return false;
 }
 
@@ -474,7 +479,7 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
   // STEP 1: Hard Exclusions (immediate disqualification)
   // =========================================================
   if (ownedCards.includes(card.card_name)) return -9999;
-  if (issuerExcluded(card.issuer, answers.cards_24mo)) return -9999;
+  if (issuerExcluded(card.issuer, answers)) return -9999;
 
   const rewardModel = card.reward_model.toLowerCase();
   const isTravelCard = rewardModel === "travel" || rewardModel === "airline" || rewardModel === "hotel";
@@ -852,15 +857,14 @@ export default function ResultsPage() {
   // Issuer Warnings
   // ---------------------
   const issuerWarnings = useMemo(() => {
-    if (!answers.cards_24mo) return [];
-    if (answers.cards_24mo === "5")
-      return ["Chase cards may not be available due to Chase 5/24 rules."];
-    if (answers.cards_24mo === "6")
-      return ["Chase and Citi cards may not be available due to issuer approval rules."];
-    if (answers.cards_24mo === "7+")
-      return ["Chase, Citi, and Amex cards may not be available due to issuer approval rules."];
-    return [];
-  }, [answers.cards_24mo]);
+    const rules: string[] = Array.isArray(answers.issuer_approval_rules) ? answers.issuer_approval_rules : [];
+    const w: string[] = [];
+    if (rules.includes("5_in_24mo")) w.push("Chase cards may not be available (5+ cards in 24 months).");
+    if (rules.includes("6_in_24mo")) w.push("Chase and Barclays cards may not be available (6+ cards in 24 months).");
+    if (rules.includes("2_in_60_days")) w.push("Citi and Amex cards may not be available (2+ cards in 60 days).");
+    if (rules.includes("2_in_90_days")) w.push("Amex cards may not be available (2+ cards in 90 days).");
+    return w;
+  }, [answers.issuer_approval_rules]);
 
 
 
@@ -869,12 +873,9 @@ export default function ResultsPage() {
   // ---------------------
   // Refinement Visibility
   // ---------------------
-  const hasAnsweredCards24mo = Boolean(answers.cards_24mo);
-  const visibleRefinements = refinementQuestions.filter(q => {
-    if (q.id === "cards_24mo") return true;
-    if (!hasAnsweredCards24mo) return false;
-    return q.dependsOn ? q.dependsOn(answers) : true;
-  });
+  const visibleRefinements = refinementQuestions.filter(q =>
+    q.dependsOn ? q.dependsOn(answers) : true
+  );
 
 
 
@@ -1041,26 +1042,64 @@ export default function ResultsPage() {
                   </div>
                 )}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {q.options.map(option => (
-                    <button
-                      key={option.value}
-                      onClick={() =>
-                        setAnswers(prev => ({ ...prev, [q.id]: option.value }))
-                      }
-                      style={{
-                        padding: "6px 14px",
-                        borderRadius: 999,
-                        border: "1px solid #c7d2fe",
-                        background:
-                          answers[q.id] === option.value ? "#2563eb" : "#ffffff",
-                        color:
-                          answers[q.id] === option.value ? "#ffffff" : "#1e3a8a",
-                        fontSize: 13
-                      }}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                  {"multiSelect" in q && q.multiSelect ? (
+                    q.options.map((option: { value: string; label: string }) => {
+                      const selected: string[] = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+                      const isChecked = selected.includes(option.value);
+                      return (
+                        <label
+                          key={option.value}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "8px 12px",
+                            borderRadius: 8,
+                            border: `1px solid ${isChecked ? "#2563eb" : "#c7d2fe"}`,
+                            background: isChecked ? "#eef2ff" : "#ffffff",
+                            cursor: "pointer",
+                            fontSize: 13
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              setAnswers(prev => {
+                                const current: string[] = Array.isArray(prev[q.id]) ? prev[q.id] : [];
+                                const next = current.includes(option.value)
+                                  ? current.filter(v => v !== option.value)
+                                  : [...current, option.value];
+                                return { ...prev, [q.id]: next };
+                              });
+                            }}
+                          />
+                          <span style={{ color: isChecked ? "#1e3a8a" : "#475569" }}>{option.label}</span>
+                        </label>
+                      );
+                    })
+                  ) : (
+                    q.options.map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() =>
+                          setAnswers(prev => ({ ...prev, [q.id]: option.value }))
+                        }
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: 999,
+                          border: "1px solid #c7d2fe",
+                          background:
+                            answers[q.id] === option.value ? "#2563eb" : "#ffffff",
+                          color:
+                            answers[q.id] === option.value ? "#ffffff" : "#1e3a8a",
+                          fontSize: 13
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             ))}
@@ -1084,7 +1123,7 @@ export default function ResultsPage() {
               "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
           }}
         >
-          debug – mode={answers.card_mode || "-"}; cards_24mo={answers.cards_24mo || "-"};
+          debug – mode={answers.card_mode || "-"}; approval_rules={JSON.stringify(answers.issuer_approval_rules || [])};
           travel_type={answers.travel_rewards_type || "-"};
           airline={answers.preferred_airline || "-"};
           hotel={answers.preferred_hotel || "-"}
