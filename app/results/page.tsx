@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Papa from "papaparse";
 import { getTheme, type CardMode } from "@/app/lib/theme";
+import { FeedbackButton } from "@/app/components/FeedbackButton";
 
 
 
@@ -1714,44 +1715,6 @@ export default function ResultsPage() {
 
 
 
-        {compareCards.length >= 2 && compareCards.length <= 4 && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              marginTop: 28,
-              marginBottom: 28,
-              padding: "16px 20px",
-              background: `linear-gradient(135deg, ${theme.primaryLight} 0%, ${theme.primaryLighter}40 100%)`,
-              borderRadius: 12,
-              border: `1px solid ${theme.primaryLighter}`
-            }}
-          >
-            <button
-              onClick={() => {
-                const q = compareCards.map(c => encodeURIComponent(c)).join(",");
-                router.push(`/comparison?cards=${q}`);
-              }}
-              style={{
-                padding: "12px 28px",
-                borderRadius: 999,
-                border: "none",
-                background: theme.primary,
-                color: "#ffffff",
-                fontWeight: 600,
-                fontSize: 15,
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-              }}
-            >
-              Compare {compareCards.length} cards →
-            </button>
-          </div>
-        )}
-
-
-
         <hr
           style={{
             border: "none",
@@ -1913,6 +1876,44 @@ export default function ResultsPage() {
 
 
 
+        {compareCards.length >= 2 && compareCards.length <= 4 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              marginTop: 28,
+              marginBottom: 28,
+              padding: "16px 20px",
+              background: `linear-gradient(135deg, ${theme.primaryLight} 0%, ${theme.primaryLighter}40 100%)`,
+              borderRadius: 12,
+              border: `1px solid ${theme.primaryLighter}`
+            }}
+          >
+            <button
+              onClick={() => {
+                const q = compareCards.map(c => encodeURIComponent(c)).join(",");
+                router.push(`/comparison?cards=${q}`);
+              }}
+              style={{
+                padding: "12px 28px",
+                borderRadius: 999,
+                border: "none",
+                background: theme.primary,
+                color: "#ffffff",
+                fontWeight: 600,
+                fontSize: 15,
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+              }}
+            >
+              Compare {compareCards.length} cards →
+            </button>
+          </div>
+        )}
+
+
+
         {ownedCards.length > 0 && (
           <>
             <h3 style={{ marginTop: 32, marginBottom: 12 }}>
@@ -1991,6 +1992,7 @@ export default function ResultsPage() {
           </>
         )}
       </div>
+      <FeedbackButton />
     </div>
   );
 }

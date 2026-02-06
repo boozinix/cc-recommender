@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Papa from "papaparse";
 import Link from "next/link";
+import { getTheme, type CardMode } from "@/app/lib/theme";
 
 // =========================================================
 // Types
@@ -17,12 +18,66 @@ type Card = {
   intro_apr_purchase: string;
   signup_bonus: string;
   signup_bonus_type: string;
+  estimated_bonus_value_usd?: string;
   minimum_spend_amount?: string;
   spend_time_frame?: string;
   bank_rules?: string;
   pros?: string;
   cons?: string;
+  application_link?: string;
 };
+
+const bankLogoFiles: Record<string, string> = {
+  "Chase": "chase.svg",
+  "Citi": "citi.svg",
+  "Capital One": "capital-one.svg",
+  "Bank of America": "bank-of-america.svg",
+  "Amex": "american-express.svg",
+  "Barclays": "barclays.jpeg",
+  "U.S. Bank": "usbank.png",
+  "Wells Fargo": "wellsfargo.jpg"
+};
+
+function getBankLogoPath(issuer: string): string | null {
+  const file = bankLogoFiles[issuer];
+  return file ? `/logos/banks/${file}` : null;
+}
+
+const brandLogoFiles: Record<string, string> = {
+  "alaska": "alaska.svg",
+  "american": "american.png",
+  "breeze": "breeze.svg",
+  "choice": "choice.svg",
+  "delta": "delta.svg",
+  "expedia": "expedia.svg",
+  "frontier": "frontier.svg",
+  "hilton": "hilton.svg",
+  "hyatt": "hyatt.png",
+  "ihg": "ihg.svg",
+  "jetblue": "jetblue.svg",
+  "marriott": "marriott.svg",
+  "southwest": "southwest.svg",
+  "spirit": "spirit.svg",
+  "united": "united.svg",
+  "wyndham": "wyndham.svg"
+};
+
+function getBrandLogoPath(card: Card): string | null {
+  const model = (card.reward_model || "").toLowerCase();
+  const isBranded = model === "airline" || model === "hotel" || model === "travel";
+  if (!isBranded) return null;
+  const family = (card.card_family || "").trim().toLowerCase();
+  if (family && brandLogoFiles[family]) return `/logos/brands/${brandLogoFiles[family]}`;
+  const name = card.card_name.toLowerCase();
+  if (name.includes("frontier")) return "/logos/brands/frontier.svg";
+  if (name.includes("hyatt")) return "/logos/brands/hyatt.png";
+  if (name.includes("spirit")) return "/logos/brands/spirit.svg";
+  if (name.includes("breeze")) return "/logos/brands/breeze.svg";
+  if (name.includes("choice") || name.includes("privileges")) return "/logos/brands/choice.svg";
+  if (name.includes("wyndham")) return "/logos/brands/wyndham.svg";
+  if (name.includes("expedia") || name.includes("one key") || name.includes("hotels.com")) return "/logos/brands/expedia.svg";
+  return null;
+}
 
 /** General rewards, or specific airline/hotel brand */
 function getRewardsType(card: Card): string {
@@ -42,14 +97,19 @@ function formatNumberWithCommas(numStr: string): string {
 // =========================================================
 // Helpers
 // =========================================================
-function formatSignupBonus(card: Card): string {
+function formatSignupBonus(card: Card): string | JSX.Element {
   const bonus = (card.signup_bonus || "").trim();
   const type = (card.signup_bonus_type || "").trim().toLowerCase();
+  const estValue = parseInt((card.estimated_bonus_value_usd || "").replace(/[^0-9]/g, ""), 10);
+  const hasValue = !Number.isNaN(estValue) && estValue > 0;
   if (!bonus) return "—";
-  if (type === "dollars") return `$${formatNumberWithCommas(bonus)}`;
-  if (type === "points") return `${formatNumberWithCommas(bonus)} points`;
-  if (type === "miles") return `${formatNumberWithCommas(bonus)} miles`;
-  return formatNumberWithCommas(bonus);
+  let main = "";
+  if (type === "dollars") main = `$${formatNumberWithCommas(bonus)}`;
+  else if (type === "points") main = `${formatNumberWithCommas(bonus)} points`;
+  else if (type === "miles") main = `${formatNumberWithCommas(bonus)} miles`;
+  else main = formatNumberWithCommas(bonus);
+  if (hasValue && type !== "dollars") return <>{main} <span style={{ color: "#64748b", fontSize: 13 }}>(worth ${estValue.toLocaleString()})</span></>;
+  return main;
 }
 
 function formatSpendRequirement(card: Card): string {
@@ -73,8 +133,17 @@ function ComparisonPageContent() {
   const [allCards, setAllCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [fallbackMode, setFallbackMode] = useState<CardMode>("personal");
   const cardNamesParam = searchParams.get("cards") || "";
+
+  useEffect(() => {
+    const m = localStorage.getItem("card_mode") as CardMode | null;
+    if (m === "personal" || m === "business") setFallbackMode(m);
+  }, []);
+
+  // Use first card in comparison for theme; fallback to localStorage when no cards (error state)
+  const compareThemeMode: CardMode = cards.length > 0 && (cards[0].card_type || "").toLowerCase() === "business" ? "business" : fallbackMode;
+  const theme = getTheme(compareThemeMode);
 
   useEffect(() => {
     fetch("/cards.csv")
@@ -137,7 +206,7 @@ function ComparisonPageContent() {
             display: "inline-block",
             padding: "10px 18px",
             borderRadius: 999,
-            background: "#2563eb",
+            background: theme.primary,
             color: "#fff",
             textDecoration: "none",
             fontWeight: 600
@@ -201,18 +270,58 @@ function ComparisonPageContent() {
     );
   };
 
-  const columns = [
-    { key: "name", label: "Name", render: (c: Card) => c.card_name },
+  const bankCell = (c: Card) => {
+    const logo = getBankLogoPath(c.issuer);
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        {logo && <img src={logo} alt="" style={{ width: 32, height: 32, objectFit: "contain" }} />}
+        <span>{c.issuer}</span>
+      </span>
+    );
+  };
+
+  const applyCell = (c: Card) => {
+    const link = (c.application_link || "").trim();
+    if (!link) return <span style={{ color: "#94a3b8", fontSize: 13 }}>—</span>;
+    return (
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-block",
+          padding: "8px 16px",
+          borderRadius: 8,
+          background: theme.primary,
+          color: "#fff",
+          textDecoration: "none",
+          fontWeight: 600,
+          fontSize: 13
+        }}
+      >
+        Apply here
+      </a>
+    );
+  };
+
+  const rows = [
     { key: "type", label: "Personal / Business", render: (c: Card) => (c.card_type || "").toLowerCase() === "business" ? "Business" : "Personal" },
-    { key: "bank", label: "Bank", render: (c: Card) => c.issuer },
+    { key: "bank", label: "Bank", render: bankCell },
     { key: "rewards_type", label: "Rewards", render: getRewardsType },
     { key: "bank_rules", label: "Bank rules", render: (c: Card) => bankRulesCell(c.bank_rules) },
     { key: "intro_apr", label: "Intro APR", render: (c: Card) => c.intro_apr_purchase?.trim() || "None" },
     { key: "signup_bonus", label: "Sign-up bonus", render: formatSignupBonus },
     { key: "spend", label: "Spending requirements", render: formatSpendRequirement },
     { key: "pros", label: "Pros", render: (c: Card) => prosConsCell(c.pros, c.cons, true) },
-    { key: "cons", label: "Cons", render: (c: Card) => prosConsCell(c.pros, c.cons, false) }
+    { key: "cons", label: "Cons", render: (c: Card) => prosConsCell(c.pros, c.cons, false) },
+    { key: "apply", label: "Apply", render: applyCell }
   ];
+
+  const cellMinWidth = (key: string) => {
+    if (key === "pros" || key === "cons") return 200;
+    if (key === "bank_rules") return 180;
+    return undefined;
+  };
 
   return (
     <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 1400, margin: "0 auto", background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 120px)" }}>
@@ -223,9 +332,9 @@ function ComparisonPageContent() {
           style={{
             padding: "10px 20px",
             borderRadius: 10,
-            border: "1px solid #c7d2fe",
+            border: `1px solid ${theme.primaryLighter}`,
             background: "#ffffff",
-            color: "#1e3a8a",
+            color: theme.primaryDark,
             textDecoration: "none",
             fontWeight: 600,
             fontSize: 14,
@@ -254,30 +363,53 @@ function ComparisonPageContent() {
         >
           <thead>
             <tr>
-              {columns.map((col) => (
-                <th
-                  key={col.key}
-                  style={{
-                    padding: "16px 20px",
-                    textAlign: "left",
-                    background: "linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%)",
-                    fontWeight: 600,
-                    fontSize: 11,
-                    color: "#475569",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    borderBottom: "2px solid #cbd5e1"
-                  }}
-                >
-                  {col.label}
-                </th>
-              ))}
+              <th
+                style={{
+                  padding: "16px 20px",
+                  textAlign: "left",
+                  background: "linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%)",
+                  fontWeight: 600,
+                  fontSize: 11,
+                  color: "#475569",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  borderBottom: "2px solid #cbd5e1",
+                  borderRight: "1px solid #e2e8f0",
+                  minWidth: 140
+                }}
+              >
+                Feature
+              </th>
+              {cards.map((card) => {
+                const brandLogo = getBrandLogoPath(card);
+                return (
+                  <th
+                    key={card.card_name}
+                    style={{
+                      padding: "16px 20px",
+                      textAlign: "left",
+                      background: "linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%)",
+                      fontWeight: 600,
+                      fontSize: 14,
+                      color: "#0f172a",
+                      borderBottom: "2px solid #cbd5e1",
+                      borderRight: "1px solid #e2e8f0",
+                      minWidth: 180
+                    }}
+                  >
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                      {brandLogo && <img src={brandLogo} alt="" style={{ width: 36, height: 36, objectFit: "contain", flexShrink: 0 }} />}
+                      <span>{card.card_name}</span>
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
-            {cards.map((card, rowIndex) => (
+            {rows.map((row, rowIndex) => (
               <tr
-                key={card.card_name}
+                key={row.key}
                 style={{
                   background: rowIndex % 2 === 0 ? "#ffffff" : "#fafbfc",
                   transition: "background 0.15s ease"
@@ -289,23 +421,35 @@ function ComparisonPageContent() {
                   e.currentTarget.style.background = rowIndex % 2 === 0 ? "#ffffff" : "#fafbfc";
                 }}
               >
-                {columns.map((col) => (
+                <td
+                  style={{
+                    padding: "14px 20px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "#475569",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.03em",
+                    borderBottom: "1px solid #f1f5f9",
+                    borderRight: "1px solid #e2e8f0",
+                    verticalAlign: "top"
+                  }}
+                >
+                  {row.label}
+                </td>
+                {cards.map((card) => (
                   <td
-                    key={col.key}
+                    key={card.card_name}
                     style={{
-                      padding: "18px 20px",
+                      padding: "16px 20px",
                       fontSize: 14,
                       color: "#334155",
-                      borderBottom: rowIndex < cards.length - 1 ? "1px solid #f1f5f9" : "none",
+                      borderBottom: "1px solid #f1f5f9",
+                      borderRight: "1px solid #f1f5f9",
                       verticalAlign: "top",
-                      minWidth: col.key === "pros" || col.key === "cons" ? 200 : col.key === "bank_rules" ? 180 : undefined
+                      minWidth: cellMinWidth(row.key)
                     }}
                   >
-                    {col.key === "name" ? (
-                      <span style={{ fontWeight: 600, fontSize: 15, color: "#0f172a" }}>{col.render(card)}</span>
-                    ) : (
-                      col.render(card)
-                    )}
+                    {row.render(card)}
                   </td>
                 ))}
               </tr>
