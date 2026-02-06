@@ -98,7 +98,7 @@ export default function Home() {
         What Credit Card Should I Get?
       </h1>
 
-      <p style={{ marginBottom: 24, color: "#555", textAlign: "center", maxWidth: 420 }}>
+      <p style={{ marginBottom: 24, color: "var(--text-muted)", textAlign: "center", maxWidth: 420 }}>
         Get recommendations by answering a few questions, or describe what you want in your own words.
       </p>
 
@@ -126,7 +126,8 @@ export default function Home() {
               paddingRight: 48,
               fontSize: 16,
               borderRadius: 10,
-              border: error ? "2px solid #dc2626" : "1px solid #ccc",
+              border: error ? "2px solid #dc2626" : "2px solid var(--input-border)",
+              background: "var(--input-bg)",
               boxSizing: "border-box"
             }}
             aria-label="Describe the card you want"
@@ -146,8 +147,8 @@ export default function Home() {
                 height: 36,
                 borderRadius: "50%",
                 border: "none",
-                background: isListening ? "#dc2626" : "#e5e7eb",
-                color: isListening ? "#fff" : "#374151",
+                background: isListening ? "#dc2626" : "var(--pill-bg)",
+                color: isListening ? "#fff" : "var(--pill-text)",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
@@ -186,7 +187,7 @@ export default function Home() {
         </button>
       </form>
 
-      <p style={{ marginBottom: 12, color: "#888", fontSize: 14 }}>
+      <p style={{ marginBottom: 12, color: "var(--text-muted-light)", fontSize: 14 }}>
         or
       </p>
 

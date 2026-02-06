@@ -56,7 +56,7 @@ type Answers = {
 const issuerColors: Record<string, { bg: string; text: string }> = {
   chase: { bg: "#1e3a8a", text: "#ffffff" },
   amex: { bg: "#e5e7eb", text: "#0f172a" },
-  citi: { bg: "#2563eb", text: "#ffffff" },
+  citi: { bg: "#0e7490", text: "#ffffff" },
   "bank of america": { bg: "#dc2626", text: "#ffffff" },
   "capital one": { bg: "#dc2626", text: "#ffffff" },
   barclays: { bg: "#e0f2fe", text: "#075985" },
@@ -301,26 +301,6 @@ const refinementQuestions = [
       { value: "2_in_60_days", label: "2+ cards in 60 days (exclude Citi & Amex)" },
       { value: "2_in_90_days", label: "2+ cards in 90 days (exclude Amex)" }
     ]
-  },
-  {
-    id: "boa_bank_account",
-    question: "Do you have a Bank of America checking or savings account?",
-    helper: "BoA approvals and Preferred Rewards benefits are stronger with an existing BoA relationship.",
-    dependsOn: () => true,
-    options: [
-      { value: "No", label: "No" },
-      { value: "Yes", label: "Yes" }
-    ]
-  },
-  {
-    id: "wells_fargo_account_1yr",
-    question: "Have you had a Wells Fargo checking or savings account for 1 year or more?",
-    helper: "Some Wells Fargo cards favor applicants with an existing WF banking relationship.",
-    dependsOn: () => true,
-    options: [
-      { value: "No", label: "No" },
-      { value: "Yes", label: "Yes" }
-    ]
   }
 ];
 
@@ -336,6 +316,12 @@ function hasIntroAPR(card: Card) {
 }
 
 
+
+/** Split pros/cons string into line items (handles ";" or "•" separators). Returns all items. */
+function splitProsCons(text: string | undefined): string[] {
+  if (!text || !text.trim()) return [];
+  return text.split(/\s*[;•]\s*/).map(s => s.trim()).filter(Boolean);
+}
 
 /** Exclude issuer based on selected approval rules (one question, multi-select). */
 function issuerExcluded(issuer: string, answers: Answers): boolean {
@@ -542,9 +528,6 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
   // =========================================================
   if (ownedCards.includes(card.card_name)) return -9999;
   if (issuerExcluded(card.issuer, answers)) return -9999;
-  // Wells Fargo: only show WF cards when user has had a WF account 1+ year (approval odds)
-  if ((card.issuer || "").toLowerCase() === "wells fargo" && answers.wells_fargo_account_1yr !== "Yes") return -9999;
-
   const rewardModel = card.reward_model.toLowerCase();
   const isTravelCard = rewardModel === "travel" || rewardModel === "airline" || rewardModel === "hotel";
   if (answers.exclude_travel_cards === "Yes" && isTravelCard) return -9999;
@@ -740,13 +723,6 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
       score -= 10; // High fee card with low overall score
     }
   }
-
-  // =========================================================
-  // STEP 9: Bank relationship boosts (BoA / Wells Fargo)
-  // =========================================================
-  const issuerLower = (card.issuer || "").toLowerCase();
-  if (answers.boa_bank_account === "Yes" && issuerLower === "bank of america") score += 15;
-  if (answers.wells_fargo_account_1yr === "Yes" && issuerLower === "wells fargo") score += 15;
 
   return score;
 }
@@ -993,7 +969,7 @@ export default function ResultsPage() {
 
 
       {/* LEFT PANEL – own scroll when content is tall */}
-      <div className="results-left" style={{ background: "#ffffff", borderRadius: 12, padding: 20 }}>
+      <div className="results-left" style={{ background: "var(--surface-elevated)", borderRadius: 12, padding: 20 }}>
 
         <a
           href="/"
@@ -1011,15 +987,16 @@ export default function ResultsPage() {
             marginBottom: 20,
             padding: "10px 18px",
             borderRadius: 8,
-            background: "#f1f5f9",
-            color: "#475569",
+            background: "#111827",
+            color: "#ffffff",
             textDecoration: "none",
             fontSize: 14,
             fontWeight: 600,
-            border: "1px solid #e2e8f0"
+            border: "none",
+            cursor: "pointer"
           }}
         >
-          ← Start over
+          ← Back
         </a>
 
         {/* Personal / Business – highest-level hierarchy; selection matches mode from wizard */}
@@ -1039,7 +1016,7 @@ export default function ResultsPage() {
                 padding: "10px 20px",
                 borderRadius: 6,
                 border: `2px solid ${(answers.card_mode || "personal") === mode ? theme.primary : theme.primaryLighter}`,
-                background: (answers.card_mode || "personal") === mode ? theme.primary : "#ffffff",
+                background: (answers.card_mode || "personal") === mode ? theme.primary : "var(--surface-elevated)",
                 color: (answers.card_mode || "personal") === mode ? "#ffffff" : theme.primaryDark,
                 fontWeight: 600,
                 fontSize: 14,
@@ -1055,7 +1032,7 @@ export default function ResultsPage() {
         <div
           style={{
             marginBottom: 24,
-            border: "1px solid #e2e8f0",
+            border: "1px solid var(--border)",
             borderRadius: 12,
             overflow: "hidden",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
@@ -1065,16 +1042,16 @@ export default function ResultsPage() {
             style={{
               fontSize: 14,
               fontWeight: 700,
-              color: "#334155",
+              color: "var(--text-secondary)",
               padding: "12px 14px",
-              background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
-              borderBottom: "1px solid #e2e8f0"
+              background: "var(--gradient-header)",
+              borderBottom: "1px solid var(--border)"
             }}
           >
             Your answers
           </div>
           <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 10 }}>
-            <p style={{ margin: "0 0 6px", fontSize: 11, color: "#94a3b8" }}>
+            <p style={{ margin: "0 0 6px", fontSize: 11, color: "var(--text-muted-light)" }}>
               Click any answer to change it.
             </p>
             {initialQuestions.map((q, stepIndex) => {
@@ -1120,7 +1097,7 @@ export default function ResultsPage() {
                   >
                     Q{stepIndex + 1}
                   </span>
-                  <span style={{ color: "#475569" }}>{display}</span>
+                  <span style={{ color: "var(--pill-text)" }}>{display}</span>
                   {isHovered && (
                     <span style={{ marginLeft: 8, fontSize: 11, color: theme.primary, fontWeight: 600 }}>Edit</span>
                   )}
@@ -1152,7 +1129,7 @@ export default function ResultsPage() {
         <div
           style={{
             marginBottom: 24,
-            border: "1px solid #e2e8f0",
+            border: "1px solid var(--border)",
             borderRadius: 12,
             overflow: "hidden",
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
@@ -1162,10 +1139,10 @@ export default function ResultsPage() {
             style={{
               fontSize: 14,
               fontWeight: 700,
-              color: "#334155",
+              color: "var(--text-secondary)",
               padding: "12px 14px",
-              background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
-              borderBottom: "1px solid #e2e8f0"
+              background: "var(--gradient-header)",
+              borderBottom: "1px solid var(--border)"
             }}
           >
             Refine your results
@@ -1175,8 +1152,8 @@ export default function ResultsPage() {
               <div
                 key={q.id}
                 style={{
-                  background: "#ffffff",
-                  border: "1px solid #e2e8f0",
+                  background: "var(--surface-elevated)",
+                  border: "1px solid var(--border)",
                   borderRadius: 10,
                   padding: "14px 16px",
                   boxShadow: "0 1px 2px rgba(0,0,0,0.04)"
@@ -1186,7 +1163,7 @@ export default function ResultsPage() {
                   {q.question}
                 </div>
                 {"helper" in q && q.helper && (
-                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
                     {q.helper}
                   </div>
                 )}
@@ -1205,7 +1182,7 @@ export default function ResultsPage() {
                             padding: "8px 12px",
                             borderRadius: 8,
                             border: `1px solid ${isChecked ? theme.primary : theme.primaryLighter}`,
-                            background: isChecked ? theme.primaryLight : "#ffffff",
+                            background: isChecked ? theme.primaryLight : "var(--surface-elevated)",
                             cursor: "pointer",
                             fontSize: 13
                           }}
@@ -1223,7 +1200,7 @@ export default function ResultsPage() {
                               });
                             }}
                           />
-                          <span style={{ color: isChecked ? theme.primaryDark : "#475569" }}>{option.label}</span>
+                          <span style={{ color: isChecked ? theme.primaryDark : "var(--pill-text)" }}>{option.label}</span>
                         </label>
                       );
                     })
@@ -1236,10 +1213,10 @@ export default function ResultsPage() {
                         }
                         style={{
                           padding: "6px 14px",
-                          borderRadius: 999,
+                          borderRadius: 8,
                           border: `1px solid ${theme.primaryLighter}`,
                           background:
-                            answers[q.id] === option.value ? theme.primary : "#ffffff",
+                            answers[q.id] === option.value ? theme.primary : "var(--surface-elevated)",
                           color:
                             answers[q.id] === option.value ? "#ffffff" : theme.primaryDark,
                           fontSize: 13
@@ -1299,10 +1276,10 @@ export default function ResultsPage() {
                 style={{
                   display: "flex",
                   gap: 16,
-                  background: "#ffffff",
+                  background: "var(--surface-elevated)",
                   borderRadius: 14,
                   padding: 16,
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--border)",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
                 }}
               >
@@ -1312,7 +1289,7 @@ export default function ResultsPage() {
                   minWidth: 72,
                   height: 72,
                   borderRadius: 10,
-                  background: bankLogo ? "transparent" : "linear-gradient(145deg, #f1f5f9 0%, #e2e8f0 100%)",
+                  background: bankLogo ? "transparent" : "linear-gradient(145deg, var(--pill-bg) 0%, var(--border) 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -1327,7 +1304,7 @@ export default function ResultsPage() {
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1.3 }}>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>
                     {card.card_name}
                   </h3>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -1335,7 +1312,7 @@ export default function ResultsPage() {
                       <img src={brandLogo} alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />
                     )}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                      <label style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                      <label style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                         <input
                           type="checkbox"
                           checked={ownedCards.includes(card.card_name)}
@@ -1363,53 +1340,53 @@ export default function ResultsPage() {
                     </span>
                   )}
                   {rewardLabel && (
-                    <span style={{ background: "#f1f5f9", color: "#475569", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>
+                    <span style={{ background: "var(--pill-bg)", color: "var(--pill-text)", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>
                       {rewardLabel}
                     </span>
                   )}
                   {card.intro_apr_purchase && (
-                    <span style={{ color: "#64748b", fontSize: 11 }}>APR {card.intro_apr_purchase}</span>
+                    <span style={{ color: "var(--text-muted)", fontSize: 11 }}>APR {card.intro_apr_purchase}</span>
                   )}
                   {cashbackDisplay && (
-                    <span style={{ color: "#64748b", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>
+                    <span style={{ color: "var(--text-muted)", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>
                   )}
                 </div>
 
                 {bonusDisplay && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: "#0c4a6e", background: "#e0f2fe", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>
+                  <div style={{ marginTop: 8, fontSize: 12, color: "var(--bonus-text)", background: "var(--bonus-bg)", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>
                     {bonusDisplay}
                   </div>
                 )}
 
                 {card.best_for && (
-                  <p style={{ margin: "8px 0 0", fontSize: 13, color: "#64748b", lineHeight: 1.4 }}>
+                  <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>
                     {card.best_for}
                   </p>
                 )}
 
                 <div className="results-card-pros-cons">
                   {card.pros && (
-                    <div style={{ background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
-                      <div style={{ fontWeight: 600, fontSize: 11, color: "#0f766e", marginBottom: 4 }}>Pros</div>
-                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#134e4a", lineHeight: 1.5 }}>
-                        {card.pros.split(";").slice(0, 3).map((p, i) => (
-                          <li key={i}>{p.trim()}</li>
+                    <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
+                      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
+                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>
+                        {splitProsCons(card.pros).map((p, i) => (
+                          <li key={i}>{p}</li>
                         ))}
                       </ul>
                     </div>
                   )}
                   {card.cons && (
-                    <div style={{ background: "#fef2f2", padding: 10, borderRadius: 8 }}>
-                      <div style={{ fontWeight: 600, fontSize: 11, color: "#9f1239", marginBottom: 4 }}>Cons</div>
-                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#881337", lineHeight: 1.5 }}>
-                        {card.cons.split(";").slice(0, 3).map((c, i) => (
-                          <li key={i}>{c.trim()}</li>
+                    <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
+                      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
+                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>
+                        {splitProsCons(card.cons).map((c, i) => (
+                          <li key={i}>{c}</li>
                         ))}
                       </ul>
                     </div>
                   )}
                 </div>
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div>
                     {card.application_link && (
                       <a
@@ -1440,10 +1417,10 @@ export default function ResultsPage() {
                       gap: 6,
                       padding: "6px 12px",
                       borderRadius: 8,
-                      background: compareCards.includes(card.card_name) ? theme.primaryLight : "#f8fafc",
-                      border: `1px solid ${compareCards.includes(card.card_name) ? theme.primaryLighter : "#e2e8f0"}`,
+                      background: compareCards.includes(card.card_name) ? theme.primaryLight : "var(--surface)",
+                      border: `1px solid ${compareCards.includes(card.card_name) ? theme.primaryLighter : "var(--border)"}`,
                       fontSize: 12,
-                      color: compareCards.includes(card.card_name) ? theme.primaryDark : "#64748b",
+                      color: compareCards.includes(card.card_name) ? theme.primaryDark : "var(--text-muted)",
                       cursor: "pointer"
                     }}
                   >
@@ -1480,10 +1457,10 @@ export default function ResultsPage() {
                 style={{
                   display: "flex",
                   gap: 16,
-                  background: "#ffffff",
+                  background: "var(--surface-elevated)",
                   borderRadius: 14,
                   padding: 16,
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--border)",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
                 }}
               >
@@ -1493,7 +1470,7 @@ export default function ResultsPage() {
                   minWidth: 72,
                   height: 72,
                   borderRadius: 10,
-                  background: bankLogo ? "transparent" : "linear-gradient(145deg, #f1f5f9 0%, #e2e8f0 100%)",
+                  background: bankLogo ? "transparent" : "linear-gradient(145deg, var(--pill-bg) 0%, var(--border) 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -1507,7 +1484,7 @@ export default function ResultsPage() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1.3 }}>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>
                     {card.card_name}
                   </h3>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -1515,7 +1492,7 @@ export default function ResultsPage() {
                       <img src={brandLogo} alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />
                     )}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                      <label style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                      <label style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                         <input
                           type="checkbox"
                           checked={ownedCards.includes(card.card_name)}
@@ -1542,50 +1519,50 @@ export default function ResultsPage() {
                     </span>
                   )}
                   {rewardLabel && (
-                    <span style={{ background: "#f1f5f9", color: "#475569", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>
+                    <span style={{ background: "var(--pill-bg)", color: "var(--pill-text)", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>
                       {rewardLabel}
                     </span>
                   )}
                   {card.intro_apr_purchase && (
-                    <span style={{ color: "#64748b", fontSize: 11 }}>APR {card.intro_apr_purchase}</span>
+                    <span style={{ color: "var(--text-muted)", fontSize: 11 }}>APR {card.intro_apr_purchase}</span>
                   )}
                   {cashbackDisplay && (
-                    <span style={{ color: "#64748b", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>
+                    <span style={{ color: "var(--text-muted)", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>
                   )}
                 </div>
                 {bonusDisplay && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: "#0c4a6e", background: "#e0f2fe", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>
+                  <div style={{ marginTop: 8, fontSize: 12, color: "var(--bonus-text)", background: "var(--bonus-bg)", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>
                     {bonusDisplay}
                   </div>
                 )}
                 {card.best_for && (
-                  <p style={{ margin: "8px 0 0", fontSize: 13, color: "#64748b", lineHeight: 1.4 }}>
+                  <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>
                     {card.best_for}
                   </p>
                 )}
                 <div className="results-card-pros-cons">
                   {card.pros && (
-                    <div style={{ background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
-                      <div style={{ fontWeight: 600, fontSize: 11, color: "#0f766e", marginBottom: 4 }}>Pros</div>
-                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#134e4a", lineHeight: 1.5 }}>
-                        {card.pros.split(";").slice(0, 3).map((p, i) => (
-                          <li key={i}>{p.trim()}</li>
+                    <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
+                      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
+                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>
+                        {splitProsCons(card.pros).map((p, i) => (
+                          <li key={i}>{p}</li>
                         ))}
                       </ul>
                     </div>
                   )}
                   {card.cons && (
-                    <div style={{ background: "#fef2f2", padding: 10, borderRadius: 8 }}>
-                      <div style={{ fontWeight: 600, fontSize: 11, color: "#9f1239", marginBottom: 4 }}>Cons</div>
-                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#881337", lineHeight: 1.5 }}>
-                        {card.cons.split(";").slice(0, 3).map((c, i) => (
-                          <li key={i}>{c.trim()}</li>
+                    <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
+                      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
+                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>
+                        {splitProsCons(card.cons).map((c, i) => (
+                          <li key={i}>{c}</li>
                         ))}
                       </ul>
                     </div>
                   )}
                 </div>
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div>
                     {card.application_link && (
                       <a
@@ -1616,10 +1593,10 @@ export default function ResultsPage() {
                       gap: 6,
                       padding: "6px 12px",
                       borderRadius: 8,
-                      background: compareCards.includes(card.card_name) ? theme.primaryLight : "#f8fafc",
-                      border: `1px solid ${compareCards.includes(card.card_name) ? theme.primaryLighter : "#e2e8f0"}`,
+                      background: compareCards.includes(card.card_name) ? theme.primaryLight : "var(--surface)",
+                      border: `1px solid ${compareCards.includes(card.card_name) ? theme.primaryLighter : "var(--border)"}`,
                       fontSize: 12,
-                      color: compareCards.includes(card.card_name) ? theme.primaryDark : "#64748b",
+                      color: compareCards.includes(card.card_name) ? theme.primaryDark : "var(--text-muted)",
                       cursor: "pointer"
                     }}
                   >
@@ -1651,7 +1628,7 @@ export default function ResultsPage() {
                 onClick={() => setShowMoreMain(6)}
                 style={{
                   padding: "10px 18px",
-                  borderRadius: 999,
+                  borderRadius: 8,
                   border: `1px solid ${theme.primaryLighter}`,
                   background: theme.primaryLight,
                   color: theme.primaryDark,
@@ -1669,7 +1646,7 @@ export default function ResultsPage() {
                     onClick={() => setShowMoreMain(9)}
                     style={{
                       padding: "10px 18px",
-                      borderRadius: 999,
+                      borderRadius: 8,
                       border: `1px solid ${theme.primaryLighter}`,
                       background: theme.primaryLight,
                       color: theme.primaryDark,
@@ -1684,7 +1661,7 @@ export default function ResultsPage() {
                   onClick={() => setShowMoreMain(3)}
                   style={{
                     padding: "10px 18px",
-                    borderRadius: 999,
+                    borderRadius: 8,
                     border: `1px solid ${theme.primaryLighter}`,
                     background: theme.primaryLight,
                     color: theme.primaryDark,
@@ -1700,7 +1677,7 @@ export default function ResultsPage() {
                 onClick={() => setShowMoreMain(3)}
                 style={{
                   padding: "10px 18px",
-                  borderRadius: 999,
+                  borderRadius: 8,
                   border: `1px solid ${theme.primaryLighter}`,
                   background: theme.primaryLight,
                   color: theme.primaryDark,
@@ -1718,7 +1695,7 @@ export default function ResultsPage() {
         <hr
           style={{
             border: "none",
-            borderTop: "1px solid #e2e8f0",
+            borderTop: "1px solid var(--border)",
             margin: "24px 0"
           }}
         />
@@ -1729,7 +1706,7 @@ export default function ResultsPage() {
           onClick={() => setShowOtherType(prev => !prev)}
           style={{
             padding: "10px 18px",
-            borderRadius: 999,
+            borderRadius: 8,
             border: `1px solid ${theme.primaryLighter}`,
             background: theme.primaryLight,
             color: theme.primaryDark,
@@ -1768,23 +1745,23 @@ export default function ResultsPage() {
                   style={{
                     display: "flex",
                     gap: 16,
-                    background: "#ffffff",
+                    background: "var(--surface-elevated)",
                     borderRadius: 14,
                     padding: 16,
                     marginBottom: 20,
-                    border: "1px solid #e2e8f0",
+                    border: "1px solid var(--border)",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
                   }}
                 >
-                  <div style={{ width: 72, minWidth: 72, height: 72, borderRadius: 10, background: bankLogo ? "transparent" : "linear-gradient(145deg, #f1f5f9 0%, #e2e8f0 100%)", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ width: 72, minWidth: 72, height: 72, borderRadius: 10, background: bankLogo ? "transparent" : "linear-gradient(145deg, var(--pill-bg) 0%, var(--border) 100%)", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {bankLogo ? <img src={bankLogo} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1.3 }}>{card.card_name}</h3>
+                      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>{card.card_name}</h3>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
                         {brandLogo && <img src={brandLogo} alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />}
-                        <label style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                        <label style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                           <input type="checkbox" checked={ownedCards.includes(card.card_name)} onChange={() => setOwnedCards(prev => prev.includes(card.card_name) ? prev.filter(c => c !== card.card_name) : [...prev, card.card_name])} />{" "}
                           Have it / Not interested
                         </label>
@@ -1795,27 +1772,27 @@ export default function ResultsPage() {
                       {card.card_type === "business" && (
                         <span style={{ background: theme.businessBadge.bg, color: theme.businessBadge.text, padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>Business card</span>
                       )}
-                      {rewardLabel && <span style={{ background: "#f1f5f9", color: "#475569", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>{rewardLabel}</span>}
-                      {card.intro_apr_purchase && <span style={{ color: "#64748b", fontSize: 11 }}>APR {card.intro_apr_purchase}</span>}
-                      {cashbackDisplay && <span style={{ color: "#64748b", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>}
+                      {rewardLabel && <span style={{ background: "var(--pill-bg)", color: "var(--pill-text)", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>{rewardLabel}</span>}
+                      {card.intro_apr_purchase && <span style={{ color: "var(--text-muted)", fontSize: 11 }}>APR {card.intro_apr_purchase}</span>}
+                      {cashbackDisplay && <span style={{ color: "var(--text-muted)", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>}
                     </div>
-                    {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "#0c4a6e", background: "#e0f2fe", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
-                    {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "#64748b", lineHeight: 1.4 }}>{card.best_for}</p>}
+                    {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "var(--bonus-text)", background: "var(--bonus-bg)", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
+                    {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>{card.best_for}</p>}
                     <div className="results-card-pros-cons">
                       {card.pros && (
-                        <div style={{ background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
-                          <div style={{ fontWeight: 600, fontSize: 11, color: "#0f766e", marginBottom: 4 }}>Pros</div>
-                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#134e4a", lineHeight: 1.5 }}>{card.pros.split(";").slice(0, 3).map((p, i) => <li key={i}>{p.trim()}</li>)}</ul>
+                        <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
+                          <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
+                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>{splitProsCons(card.pros).map((p, i) => <li key={i}>{p}</li>)}</ul>
                         </div>
                       )}
                       {card.cons && (
-                        <div style={{ background: "#fef2f2", padding: 10, borderRadius: 8 }}>
-                          <div style={{ fontWeight: 600, fontSize: 11, color: "#9f1239", marginBottom: 4 }}>Cons</div>
-                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#881337", lineHeight: 1.5 }}>{card.cons.split(";").slice(0, 3).map((c, i) => <li key={i}>{c.trim()}</li>)}</ul>
+                        <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
+                          <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
+                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>{splitProsCons(card.cons).map((c, i) => <li key={i}>{c}</li>)}</ul>
                         </div>
                       )}
                     </div>
-                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                       <div>
                         {card.application_link && (
                           <a
@@ -1846,10 +1823,10 @@ export default function ResultsPage() {
                           gap: 6,
                           padding: "6px 12px",
                           borderRadius: 8,
-                          background: compareCards.includes(card.card_name) ? theme.primaryLight : "#f8fafc",
-                          border: `1px solid ${compareCards.includes(card.card_name) ? theme.primaryLighter : "#e2e8f0"}`,
+                          background: compareCards.includes(card.card_name) ? theme.primaryLight : "var(--surface)",
+                          border: `1px solid ${compareCards.includes(card.card_name) ? theme.primaryLighter : "var(--border)"}`,
                           fontSize: 12,
-                          color: compareCards.includes(card.card_name) ? theme.primaryDark : "#64748b",
+                          color: compareCards.includes(card.card_name) ? theme.primaryDark : "var(--text-muted)",
                           cursor: "pointer"
                         }}
                       >
@@ -1872,44 +1849,6 @@ export default function ResultsPage() {
               );
             })}
           </>
-        )}
-
-
-
-        {compareCards.length >= 2 && compareCards.length <= 4 && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              marginTop: 28,
-              marginBottom: 28,
-              padding: "16px 20px",
-              background: `linear-gradient(135deg, ${theme.primaryLight} 0%, ${theme.primaryLighter}40 100%)`,
-              borderRadius: 12,
-              border: `1px solid ${theme.primaryLighter}`
-            }}
-          >
-            <button
-              onClick={() => {
-                const q = compareCards.map(c => encodeURIComponent(c)).join(",");
-                router.push(`/comparison?cards=${q}`);
-              }}
-              style={{
-                padding: "12px 28px",
-                borderRadius: 999,
-                border: "none",
-                background: theme.primary,
-                color: "#ffffff",
-                fontWeight: 600,
-                fontSize: 15,
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-              }}
-            >
-              Compare {compareCards.length} cards →
-            </button>
-          </div>
         )}
 
 
@@ -1938,23 +1877,23 @@ export default function ResultsPage() {
                   style={{
                     display: "flex",
                     gap: 16,
-                    background: "#f8fafc",
+                    background: "var(--surface)",
                     borderRadius: 14,
                     padding: 16,
                     marginBottom: 16,
-                    border: "1px solid #e2e8f0",
+                    border: "1px solid var(--border)",
                     boxShadow: "0 2px 6px rgba(0,0,0,0.04)"
                   }}
                 >
-                  <div style={{ width: 72, minWidth: 72, height: 72, borderRadius: 10, background: bankLogo ? "transparent" : "linear-gradient(145deg, #e2e8f0 0%, #cbd5e1 100%)", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ width: 72, minWidth: 72, height: 72, borderRadius: 10, background: bankLogo ? "transparent" : "linear-gradient(145deg, var(--border) 0%, #cbd5e1 100%)", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {bankLogo ? <img src={bankLogo} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1.3 }}>{card.card_name}</h3>
+                      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>{card.card_name}</h3>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                         {brandLogo && <img src={brandLogo} alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />}
-                        <label style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                        <label style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                           <input type="checkbox" checked onChange={() => setOwnedCards(prev => prev.filter(c => c !== name))} />{" "}
                           Remove
                         </label>
@@ -1965,23 +1904,23 @@ export default function ResultsPage() {
                       {card.card_type === "business" && (
                         <span style={{ background: theme.businessBadge.bg, color: theme.businessBadge.text, padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>Business card</span>
                       )}
-                      {rewardLabel && <span style={{ background: "#e2e8f0", color: "#475569", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>{rewardLabel}</span>}
-                      {card.intro_apr_purchase && <span style={{ color: "#64748b", fontSize: 11 }}>APR {card.intro_apr_purchase}</span>}
-{cashbackDisplay && <span style={{ color: "#64748b", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>}
+                      {rewardLabel && <span style={{ background: "var(--border)", color: "var(--pill-text)", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>{rewardLabel}</span>}
+                      {card.intro_apr_purchase && <span style={{ color: "var(--text-muted)", fontSize: 11 }}>APR {card.intro_apr_purchase}</span>}
+{cashbackDisplay && <span style={{ color: "var(--text-muted)", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>}
                       </div>
-                    {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "#0c4a6e", background: "#e0f2fe", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
-                    {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "#64748b", lineHeight: 1.4 }}>{card.best_for}</p>}
+                    {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "var(--bonus-text)", background: "var(--bonus-bg)", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
+                    {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>{card.best_for}</p>}
                     <div className="results-card-pros-cons">
                       {card.pros && (
-                        <div style={{ background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
-                          <div style={{ fontWeight: 600, fontSize: 11, color: "#0f766e", marginBottom: 4 }}>Pros</div>
-                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#134e4a", lineHeight: 1.5 }}>{card.pros.split(";").slice(0, 3).map((p, i) => <li key={i}>{p.trim()}</li>)}</ul>
+                        <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
+                          <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
+                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>{splitProsCons(card.pros).map((p, i) => <li key={i}>{p}</li>)}</ul>
                         </div>
                       )}
                       {card.cons && (
-                        <div style={{ background: "#fef2f2", padding: 10, borderRadius: 8 }}>
-                          <div style={{ fontWeight: 600, fontSize: 11, color: "#9f1239", marginBottom: 4 }}>Cons</div>
-                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#881337", lineHeight: 1.5 }}>{card.cons.split(";").slice(0, 3).map((c, i) => <li key={i}>{c.trim()}</li>)}</ul>
+                        <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
+                          <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
+                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>{splitProsCons(card.cons).map((c, i) => <li key={i}>{c}</li>)}</ul>
                         </div>
                       )}
                     </div>

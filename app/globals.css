@@ -3,6 +3,29 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --surface: #f8fafc;
+  --surface-elevated: #ffffff;
+  --surface-subtle: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-muted-light: #94a3b8;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --gradient-header: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  --gradient-section: linear-gradient(180deg, #f8fafc 0%, #ffffff 120px);
+  --pros-bg: #f0fdfa;
+  --pros-text: #0f766e;
+  --pros-list: #134e4a;
+  --cons-bg: #fef2f2;
+  --cons-text: #9f1239;
+  --cons-list: #881337;
+  --bonus-bg: #e0f2fe;
+  --bonus-text: #0c4a6e;
+  --input-bg: #ffffff;
+  --input-border: #94a3b8;
+  --pill-bg: #f1f5f9;
+  --pill-text: #475569;
 }
 
 @theme inline {
@@ -16,6 +39,29 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --surface: #171717;
+    --surface-elevated: #262626;
+    --surface-subtle: #1f1f1f;
+    --text-primary: #f1f5f9;
+    --text-secondary: #e2e8f0;
+    --text-muted: #94a3b8;
+    --text-muted-light: #64748b;
+    --border: #404040;
+    --border-light: #333333;
+    --gradient-header: linear-gradient(180deg, #1f1f1f 0%, #171717 100%);
+    --gradient-section: linear-gradient(180deg, #171717 0%, #0a0a0a 120px);
+    --pros-bg: #134e4a;
+    --pros-text: #5eead4;
+    --pros-list: #99f6e4;
+    --cons-bg: #7f1d1d;
+    --cons-text: #fca5a5;
+    --cons-list: #fecaca;
+    --bonus-bg: #0c4a6e;
+    --bonus-text: #7dd3fc;
+    --input-bg: #262626;
+    --input-border: #64748b;
+    --pill-bg: #404040;
+    --pill-text: #cbd5e1;
   }
 }
 
@@ -31,7 +77,7 @@ body {
   grid-template-columns: 360px 1fr;
   gap: 40px;
   padding: 40px;
-  background: #f8fafc;
+  background: var(--surface);
   min-height: 100vh;
 }
 

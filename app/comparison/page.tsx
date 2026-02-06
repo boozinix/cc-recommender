@@ -15,6 +15,7 @@ type Card = {
   issuer: string;
   card_type: string;
   reward_model: string;
+  rewards_type?: string;
   card_family?: string;
   intro_apr_purchase: string;
   signup_bonus: string;
@@ -80,13 +81,15 @@ function getBrandLogoPath(card: Card): string | null {
   return null;
 }
 
-/** General rewards, or specific airline/hotel brand */
-function getRewardsType(card: Card): string {
+/** Rewards program name from CSV (rewards_type); fallback for legacy data */
+function getRewardsTypeDisplay(card: Card): string {
+  if (card.rewards_type?.trim()) return card.rewards_type.trim();
   const r = (card.reward_model || "").toLowerCase();
   const family = (card.card_family || "").trim();
   if (r === "airline") return family || "Airline";
   if (r === "hotel") return family || "Hotel";
-  return "General rewards";
+  if (r === "cashback") return "Cash";
+  return "—";
 }
 
 function formatNumberWithCommas(numStr: string): string {
@@ -109,7 +112,7 @@ function formatSignupBonus(card: Card): string | ReactElement {
   else if (type === "points") main = `${formatNumberWithCommas(bonus)} points`;
   else if (type === "miles") main = `${formatNumberWithCommas(bonus)} miles`;
   else main = formatNumberWithCommas(bonus);
-  if (hasValue && type !== "dollars") return <>{main} <span style={{ color: "#64748b", fontSize: 13 }}>(worth ${estValue.toLocaleString()})</span></>;
+  if (hasValue && type !== "dollars") return <>{main} <span style={{ color: "var(--text-muted)", fontSize: 13 }}>(worth ${estValue.toLocaleString()})</span></>;
   return main;
 }
 
@@ -200,7 +203,7 @@ function ComparisonPageContent() {
     return (
       <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 600 }}>
         <h1 style={{ fontSize: 24, marginBottom: 16 }}>Compare cards</h1>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error || "No cards selected."}</p>
+        <p style={{ color: "var(--text-muted)", marginBottom: 24 }}>{error || "No cards selected."}</p>
         <Link
           href="/results"
           style={{
@@ -221,19 +224,19 @@ function ComparisonPageContent() {
 
   const bankRulesCell = (text: string | undefined) => {
     const raw = (text || "").trim();
-    if (!raw) return <span style={{ fontSize: 12, color: "#94a3b8" }}>—</span>;
+    if (!raw) return <span style={{ fontSize: 12, color: "var(--text-muted-light)" }}>—</span>;
     const parts = raw.split(/\s*\|\s*/).filter(Boolean);
     return (
       <div
         style={{
-          background: "#f8fafc",
+          background: "var(--surface)",
           padding: 10,
           borderRadius: 8,
-          border: "1px solid #e2e8f0",
+          border: "1px solid var(--border)",
           maxHeight: 100,
           overflowY: "auto",
           fontSize: 12,
-          color: "#475569",
+          color: "var(--pill-text)",
           lineHeight: 1.5
         }}
       >
@@ -252,11 +255,11 @@ function ComparisonPageContent() {
 
   const prosConsCell = (pros: string | undefined, cons: string | undefined, isPros: boolean) => {
     const text = isPros ? (pros || "—") : (cons || "—");
-    const items = text.split(";").map(s => s.trim()).filter(Boolean);
-    const bg = isPros ? "#f0fdfa" : "#fef2f2";
-    const borderColor = isPros ? "#99f6e4" : "#fecaca";
-    const color = isPros ? "#134e4a" : "#881337";
-    const headerColor = isPros ? "#0f766e" : "#9f1239";
+    const items = text.split(/\s*•\s*/).map(s => s.trim()).filter(Boolean);
+    const bg = isPros ? "var(--pros-bg)" : "var(--cons-bg)";
+    const borderColor = isPros ? "var(--pros-text)" : "var(--cons-text)";
+    const color = isPros ? "var(--pros-list)" : "var(--cons-list)";
+    const headerColor = isPros ? "var(--pros-text)" : "var(--cons-text)";
     return (
       <div style={{ background: bg, padding: 12, borderRadius: 10, border: `1px solid ${borderColor}` }}>
         <div style={{ fontWeight: 600, fontSize: 11, color: headerColor, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.03em" }}>{isPros ? "Pros" : "Cons"}</div>
@@ -265,7 +268,7 @@ function ComparisonPageContent() {
             {items.slice(0, 5).map((item, i) => <li key={i} style={{ marginBottom: 4 }}>{item}</li>)}
           </ul>
         ) : (
-          <span style={{ fontSize: 12, color: "#94a3b8" }}>—</span>
+          <span style={{ fontSize: 12, color: "var(--text-muted-light)" }}>—</span>
         )}
       </div>
     );
@@ -283,7 +286,7 @@ function ComparisonPageContent() {
 
   const applyCell = (c: Card) => {
     const link = (c.application_link || "").trim();
-    if (!link) return <span style={{ color: "#94a3b8", fontSize: 13 }}>—</span>;
+    if (!link) return <span style={{ color: "var(--text-muted-light)", fontSize: 13 }}>—</span>;
     return (
       <a
         href={link}
@@ -308,7 +311,7 @@ function ComparisonPageContent() {
   const rows = [
     { key: "type", label: "Personal / Business", render: (c: Card) => (c.card_type || "").toLowerCase() === "business" ? "Business" : "Personal" },
     { key: "bank", label: "Bank", render: bankCell },
-    { key: "rewards_type", label: "Rewards", render: getRewardsType },
+    { key: "rewards_type", label: "Rewards type", render: getRewardsTypeDisplay },
     { key: "bank_rules", label: "Bank rules", render: (c: Card) => bankRulesCell(c.bank_rules) },
     { key: "intro_apr", label: "Intro APR", render: (c: Card) => c.intro_apr_purchase?.trim() || "None" },
     { key: "signup_bonus", label: "Sign-up bonus", render: formatSignupBonus },
@@ -325,16 +328,16 @@ function ComparisonPageContent() {
   };
 
   return (
-    <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 1400, margin: "0 auto", background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 120px)" }}>
+    <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 1400, margin: "0 auto", background: "var(--gradient-section)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-        <h1 style={{ fontSize: 28, margin: 0, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.02em" }}>Compare cards</h1>
+        <h1 style={{ fontSize: 28, margin: 0, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Compare cards</h1>
         <Link
           href="/results"
           style={{
             padding: "10px 20px",
             borderRadius: 10,
             border: `1px solid ${theme.primaryLighter}`,
-            background: "#ffffff",
+            background: "var(--surface-elevated)",
             color: theme.primaryDark,
             textDecoration: "none",
             fontWeight: 600,
@@ -351,8 +354,8 @@ function ComparisonPageContent() {
           overflowX: "auto",
           borderRadius: 16,
           boxShadow: "0 4px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
-          border: "1px solid #e2e8f0",
-          background: "#ffffff"
+          border: "1px solid var(--border)",
+          background: "var(--surface-elevated)"
         }}
       >
         <table
@@ -368,14 +371,14 @@ function ComparisonPageContent() {
                 style={{
                   padding: "16px 20px",
                   textAlign: "left",
-                  background: "linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%)",
+                  background: "var(--gradient-header)",
                   fontWeight: 600,
                   fontSize: 11,
-                  color: "#475569",
+                  color: "var(--pill-text)",
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
-                  borderBottom: "2px solid #cbd5e1",
-                  borderRight: "1px solid #e2e8f0",
+                  borderBottom: "2px solid var(--border)",
+                  borderRight: "1px solid var(--border)",
                   minWidth: 140
                 }}
               >
@@ -389,12 +392,12 @@ function ComparisonPageContent() {
                     style={{
                       padding: "16px 20px",
                       textAlign: "left",
-                      background: "linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%)",
+                      background: "var(--gradient-header)",
                       fontWeight: 600,
                       fontSize: 14,
-                      color: "#0f172a",
-                      borderBottom: "2px solid #cbd5e1",
-                      borderRight: "1px solid #e2e8f0",
+                      color: "var(--text-primary)",
+                      borderBottom: "2px solid var(--border)",
+                      borderRight: "1px solid var(--border)",
                       minWidth: 180
                     }}
                   >
@@ -412,14 +415,14 @@ function ComparisonPageContent() {
               <tr
                 key={row.key}
                 style={{
-                  background: rowIndex % 2 === 0 ? "#ffffff" : "#fafbfc",
+                  background: rowIndex % 2 === 0 ? "var(--surface-elevated)" : "var(--surface)",
                   transition: "background 0.15s ease"
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f8fafc";
+                  e.currentTarget.style.background = "var(--surface)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = rowIndex % 2 === 0 ? "#ffffff" : "#fafbfc";
+                  e.currentTarget.style.background = rowIndex % 2 === 0 ? "var(--surface-elevated)" : "var(--surface)";
                 }}
               >
                 <td
@@ -427,11 +430,11 @@ function ComparisonPageContent() {
                     padding: "14px 20px",
                     fontSize: 12,
                     fontWeight: 600,
-                    color: "#475569",
+                    color: "var(--pill-text)",
                     textTransform: "uppercase",
                     letterSpacing: "0.03em",
-                    borderBottom: "1px solid #f1f5f9",
-                    borderRight: "1px solid #e2e8f0",
+                    borderBottom: "1px solid var(--pill-bg)",
+                    borderRight: "1px solid var(--border)",
                     verticalAlign: "top"
                   }}
                 >
@@ -443,9 +446,9 @@ function ComparisonPageContent() {
                     style={{
                       padding: "16px 20px",
                       fontSize: 14,
-                      color: "#334155",
-                      borderBottom: "1px solid #f1f5f9",
-                      borderRight: "1px solid #f1f5f9",
+                      color: "var(--text-secondary)",
+                      borderBottom: "1px solid var(--pill-bg)",
+                      borderRight: "1px solid var(--pill-bg)",
                       verticalAlign: "top",
                       minWidth: cellMinWidth(row.key)
                     }}

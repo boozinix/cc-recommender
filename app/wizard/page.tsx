@@ -313,7 +313,7 @@ export default function Wizard() {
         alignItems: "center",
         padding: "0 20px",
         fontFamily: "system-ui",
-        background: theme.backgroundGradient
+        background: `radial-gradient(circle at top, ${theme.primaryLight}, var(--background))`
       }}
     >
       <style>{fadeInStyle}</style>
@@ -333,7 +333,7 @@ export default function Wizard() {
               padding: "10px 20px",
               borderRadius: 999,
               border: `2px solid ${theme.primary}`,
-              background: cardMode === mode ? theme.primary : "#fff",
+              background: cardMode === mode ? theme.primary : "var(--surface-elevated)",
               color: cardMode === mode ? "#fff" : theme.primary,
               fontWeight: 600,
               cursor: "pointer"
@@ -375,14 +375,14 @@ export default function Wizard() {
             maxWidth: 420,
             marginBottom: 20,
             padding: "12px 16px",
-            background: "#ffffff",
+            background: "var(--surface-elevated)",
             borderRadius: 12,
             border: `1px solid ${theme.primaryLighter}`,
             boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
             animation: "fadeIn 0.3s ease"
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 8 }}>
             Your answers so far:
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -392,7 +392,7 @@ export default function Wizard() {
                 onClick={() => handleJumpToQuestion(item.stepIndex)}
                 style={{
                   fontSize: 13,
-                  color: "#1e293b",
+                  color: "var(--text-primary)",
                   padding: "8px 12px",
                   background: theme.primaryLight,
                   borderRadius: 6,
@@ -421,7 +421,7 @@ export default function Wizard() {
                   <span style={{ fontWeight: 600, color: theme.primary }}>
                     Q{item.stepNumber}:
                   </span>{" "}
-                  <span style={{ color: "#475569" }}>{item.answer}</span>
+                  <span style={{ color: "var(--pill-text)" }}>{item.answer}</span>
                 </div>
                 <span style={{ fontSize: 11, opacity: 0.6, marginLeft: 8 }}>
                   ←
@@ -448,7 +448,7 @@ export default function Wizard() {
 
 
           {currentQuestion.helper && (
-            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>
+            <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20 }}>
               {currentQuestion.helper}
             </div>
           )}
@@ -461,9 +461,9 @@ export default function Wizard() {
              ======================= */}
           {isRankingStep && (
             <>
-              <div style={{ fontSize: 14, color: "#475569", marginBottom: 16, textAlign: "left" }}>
+              <div style={{ fontSize: 14, color: "var(--pill-text)", marginBottom: 16, textAlign: "left" }}>
                 💡 Drag a row to reorder
-                <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 8 }}>or use ↑↓ if needed</span>
+                <span style={{ fontSize: 12, color: "var(--text-muted-light)", marginLeft: 8 }}>or use ↑↓ if needed</span>
               </div>
               <div style={{ display: "grid", gap: 12 }}>
                 {rankedGoals.map((goal, index) => {
@@ -491,7 +491,7 @@ export default function Wizard() {
                           : `2px solid ${theme.primaryLighter}`,
                         background: isDropTarget 
                           ? theme.primaryLight 
-                          : "#ffffff",
+                          : "var(--surface-elevated)",
                         display: "flex",
                         alignItems: "stretch",
                         cursor: isDragging ? "grabbing" : "grab",
@@ -525,14 +525,14 @@ export default function Wizard() {
                           alignItems: "center",
                           justifyContent: "center",
                           background: "rgba(0,0,0,0.04)",
-                          borderRight: "1px solid #e2e8f0",
+                          borderRight: "1px solid var(--border)",
                           borderRadius: "8px 0 0 8px",
                           cursor: "grab",
                           flexShrink: 0
                         }}
                         title="Drag to reorder"
                       >
-                        <span style={{ fontSize: 18, color: "#64748b", lineHeight: 1 }}>⋮⋮</span>
+                        <span style={{ fontSize: 18, color: "var(--text-muted)", lineHeight: 1 }}>⋮⋮</span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0, padding: "14px 14px 14px 16px" }}>
                         <span>{index + 1}. {label}</span>
@@ -548,10 +548,10 @@ export default function Wizard() {
                             onClick={() => moveRank(index, "up")}
                             style={{
                               padding: "6px 8px",
-                              border: "1px solid #e2e8f0",
+                              border: "1px solid var(--border)",
                               borderRadius: 6,
-                              background: canMoveUp ? "#f8fafc" : "#f1f5f9",
-                              color: canMoveUp ? "#64748b" : "#cbd5e1",
+                              background: canMoveUp ? "var(--surface)" : "var(--pill-bg)",
+                              color: canMoveUp ? "var(--text-muted)" : "var(--border)",
                               cursor: canMoveUp ? "pointer" : "default",
                               fontSize: 12
                             }}
@@ -565,10 +565,10 @@ export default function Wizard() {
                             onClick={() => moveRank(index, "down")}
                             style={{
                               padding: "6px 8px",
-                              border: "1px solid #e2e8f0",
+                              border: "1px solid var(--border)",
                               borderRadius: 6,
-                              background: canMoveDown ? "#f8fafc" : "#f1f5f9",
-                              color: canMoveDown ? "#64748b" : "#cbd5e1",
+                              background: canMoveDown ? "var(--surface)" : "var(--pill-bg)",
+                              color: canMoveDown ? "var(--text-muted)" : "var(--border)",
                               cursor: canMoveDown ? "pointer" : "default",
                               fontSize: 12
                             }}
@@ -608,12 +608,14 @@ export default function Wizard() {
                     border:
                       answers[currentQuestion.id] === option.value
                         ? `2px solid ${theme.primary}`
-                        : "2px solid #ccc",
+                        : "2px solid var(--input-border)",
                     background:
                       answers[currentQuestion.id] === option.value
                         ? theme.primaryLight
-                        : "#ffffff",
-                    cursor: "pointer"
+                        : "var(--input-bg)",
+                    color: "var(--text-primary)",
+                    cursor: "pointer",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
                   }}
                 >
                   {option.label}
@@ -639,11 +641,12 @@ export default function Wizard() {
               onClick={handleBack}
               style={{
                 padding: "12px 20px",
-                borderRadius: 999,
+                borderRadius: 8,
                 background: "#111827",
                 color: "#ffffff",
                 border: "none",
-                cursor: "pointer"
+                cursor: "pointer",
+                fontWeight: 600
               }}
             >
               ← Back
@@ -658,7 +661,7 @@ export default function Wizard() {
                 borderRadius: 999,
                 background:
                   !isRankingStep && !selectedValue ? theme.primaryLighter : theme.primary,
-                color: "#ffffff",
+                color: "var(--surface-elevated)",
                 border: "none",
                 fontWeight: 600,
                 cursor:
