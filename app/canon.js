@@ -908,8 +908,8 @@ export default function ResultsPage() {
                         color: "#134e4a"
                       }}
                     >
-                      {card.pros.split(";").map(p => (
-                        <li key={p}>{p.trim()}</li>
+                      {(card.pros || "").split(/\s*•\s*/).map(s => s.trim()).filter(Boolean).slice(0, 3).map((p, i) => (
+                        <li key={i}>{p}</li>
                       ))}
                     </ul>
                   </div>
@@ -940,8 +940,8 @@ export default function ResultsPage() {
                         color: "#881337"
                       }}
                     >
-                      {card.cons.split(";").map(c => (
-                        <li key={c}>{c.trim()}</li>
+                      {(card.cons || "").split(/\s*•\s*/).map(s => s.trim()).filter(Boolean).slice(0, 3).map((c, i) => (
+                        <li key={i}>{c}</li>
                       ))}
                     </ul>
                   </div>
@@ -1098,16 +1098,16 @@ export default function ResultsPage() {
                   >
                     {card.pros && (
                       <ul style={{ paddingLeft: 18, fontSize: 13 }}>
-                        {card.pros.split(";").map(p => (
-                          <li key={p}>{p.trim()}</li>
+                        {(card.pros || "").split(/\s*•\s*/).map(s => s.trim()).filter(Boolean).slice(0, 3).map((p, i) => (
+                          <li key={i}>{p}</li>
                         ))}
                       </ul>
                     )}
 
                     {card.cons && (
                       <ul style={{ paddingLeft: 18, fontSize: 13 }}>
-                        {card.cons.split(";").map(c => (
-                          <li key={c}>{c.trim()}</li>
+                        {(card.cons || "").split(/\s*•\s*/).map(s => s.trim()).filter(Boolean).slice(0, 3).map((c, i) => (
+                          <li key={i}>{c}</li>
                         ))}
                       </ul>
                     )}
@@ -1205,16 +1205,16 @@ export default function ResultsPage() {
                   >
                     {card.pros && (
                       <ul style={{ paddingLeft: 18, fontSize: 13 }}>
-                        {card.pros.split(";").map(p => (
-                          <li key={p}>{p.trim()}</li>
+                        {(card.pros || "").split(/\s*•\s*/).map(s => s.trim()).filter(Boolean).slice(0, 3).map((p, i) => (
+                          <li key={i}>{p}</li>
                         ))}
                       </ul>
                     )}
 
                     {card.cons && (
                       <ul style={{ paddingLeft: 18, fontSize: 13 }}>
-                        {card.cons.split(";").map(c => (
-                          <li key={c}>{c.trim()}</li>
+                        {(card.cons || "").split(/\s*•\s*/).map(s => s.trim()).filter(Boolean).slice(0, 3).map((c, i) => (
+                          <li key={i}>{c}</li>
                         ))}
                       </ul>
                     )}

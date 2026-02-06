@@ -24,6 +24,7 @@ type Card = {
   card_type: string;
   annual_fee: string;
   reward_model: string;
+  rewards_type?: string;
   card_family: string;
   cashback_rate_display?: string;
   cashback_rate_effective: string;
@@ -336,18 +337,37 @@ function issuerExcluded(issuer: string, answers: Answers): boolean {
 
 
 
+/** Reward program name for bonus display: UR, MR, TYP, United miles, Cash, etc. */
+function getBonusRewardsLabel(card: Card): string {
+  const bonusType = (card.signup_bonus_type || "").toLowerCase();
+  if (bonusType === "dollars") return "cash";
+  const rt = (card.rewards_type || "").trim();
+  if (rt) {
+    if (rt.toLowerCase() === "cash") return "cash";
+    if (/\bmiles\b/i.test(rt)) return rt.replace(/\bmiles\b/i, "miles");
+    if (/\bpoints\b/i.test(rt)) return rt;
+    return rt + " points";
+  }
+  const issuer = (card.issuer || "").toLowerCase();
+  if (issuer === "chase") return "Ultimate Rewards (UR) points";
+  if (issuer === "american express" || issuer === "amex") return "Membership Rewards (MR) points";
+  if (issuer === "citi") return "Thank You Points (TYP)";
+  if (issuer === "bank of america") return "Bank of America points";
+  if (issuer === "u.s. bank") return "U.S. Bank points";
+  if (issuer === "wells fargo") return "Wells Fargo points";
+  if (issuer === "capital one") return bonusType === "miles" ? "Capital One miles" : "Capital One points";
+  if (bonusType === "miles") return "miles";
+  if (bonusType === "points") return "points";
+  return "points";
+}
+
 function formatBonusDisplay(card: Card) {
   const value = parseInt(card.estimated_bonus_value_usd || "0", 10);
   if (!value) return null;
 
-  const bonusType = card.signup_bonus_type?.toLowerCase() || "";
-  let typeLabel = "";
-  if (bonusType === "miles") typeLabel = "miles";
-  else if (bonusType === "points") typeLabel = "points";
-  else if (bonusType === "dollars") typeLabel = "dollars";
-  else typeLabel = bonusType || "rewards";
-
-  let text = `Worth $${value.toLocaleString()} estimated value in ${typeLabel}`;
+  const rewardsLabel = getBonusRewardsLabel(card);
+  const inPhrase = rewardsLabel === "cash" ? "in cash" : `in ${rewardsLabel}`;
+  let text = `Worth $${value.toLocaleString()} estimated value ${inPhrase}`;
   const minSpendRaw = (card.minimum_spend_amount || "").trim();
   const timeFrame = (card.spend_time_frame || "").trim();
   const minSpendNum = parseMinSpend(minSpendRaw);

@@ -16,6 +16,9 @@ export const FRIEND_PASSWORDS: Record<string, string> = {
   "kal": "kal",
   "azeem": "azeem",
   "usman": "usman",
+  "halima": "halima",
+  "daniel": "daniel",
+
 
   // Add more: "their_password": "Their Name",
 };

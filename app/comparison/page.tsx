@@ -81,7 +81,7 @@ function getBrandLogoPath(card: Card): string | null {
   return null;
 }
 
-/** Rewards program name from CSV (rewards_type); fallback for legacy data */
+/** Rewards program name from CSV (rewards_type); fallback for legacy data. Call out Cash when cashback. */
 function getRewardsTypeDisplay(card: Card): string {
   if (card.rewards_type?.trim()) return card.rewards_type.trim();
   const r = (card.reward_model || "").toLowerCase();
@@ -90,6 +90,30 @@ function getRewardsTypeDisplay(card: Card): string {
   if (r === "hotel") return family || "Hotel";
   if (r === "cashback") return "Cash";
   return "—";
+}
+
+/** Reward program name for signup bonus text: UR, MR, TYP, United miles, Cash, etc. */
+function getBonusRewardsLabel(card: Card): string {
+  const bonusType = (card.signup_bonus_type || "").toLowerCase();
+  if (bonusType === "dollars") return "cash";
+  const rt = (card.rewards_type || "").trim();
+  if (rt) {
+    if (rt.toLowerCase() === "cash") return "cash";
+    if (/\bmiles\b/i.test(rt)) return rt.replace(/\bmiles\b/i, "miles");
+    if (/\bpoints\b/i.test(rt)) return rt;
+    return rt + " points";
+  }
+  const issuer = (card.issuer || "").toLowerCase();
+  if (issuer === "chase") return "Ultimate Rewards (UR) points";
+  if (issuer === "american express" || issuer === "amex") return "Membership Rewards (MR) points";
+  if (issuer === "citi") return "Thank You Points (TYP)";
+  if (issuer === "bank of america") return "Bank of America points";
+  if (issuer === "u.s. bank") return "U.S. Bank points";
+  if (issuer === "wells fargo") return "Wells Fargo points";
+  if (issuer === "capital one") return bonusType === "miles" ? "Capital One miles" : "Capital One points";
+  if (bonusType === "miles") return "miles";
+  if (bonusType === "points") return "points";
+  return "points";
 }
 
 function formatNumberWithCommas(numStr: string): string {
@@ -107,11 +131,13 @@ function formatSignupBonus(card: Card): string | ReactElement {
   const estValue = parseInt((card.estimated_bonus_value_usd || "").replace(/[^0-9]/g, ""), 10);
   const hasValue = !Number.isNaN(estValue) && estValue > 0;
   if (!bonus) return "—";
+  const rewardLabel = getBonusRewardsLabel(card);
   let main = "";
-  if (type === "dollars") main = `$${formatNumberWithCommas(bonus)}`;
-  else if (type === "points") main = `${formatNumberWithCommas(bonus)} points`;
-  else if (type === "miles") main = `${formatNumberWithCommas(bonus)} miles`;
-  else main = formatNumberWithCommas(bonus);
+  if (type === "dollars" || rewardLabel === "cash") {
+    main = `$${formatNumberWithCommas(bonus)} cash`;
+  } else {
+    main = `${formatNumberWithCommas(bonus)} ${rewardLabel}`;
+  }
   if (hasValue && type !== "dollars") return <>{main} <span style={{ color: "var(--text-muted)", fontSize: 13 }}>(worth ${estValue.toLocaleString()})</span></>;
   return main;
 }
