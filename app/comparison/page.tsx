@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Papa from "papaparse";
@@ -97,7 +98,7 @@ function formatNumberWithCommas(numStr: string): string {
 // =========================================================
 // Helpers
 // =========================================================
-function formatSignupBonus(card: Card): string | JSX.Element {
+function formatSignupBonus(card: Card): string | ReactElement {
   const bonus = (card.signup_bonus || "").trim();
   const type = (card.signup_bonus_type || "").trim().toLowerCase();
   const estValue = parseInt((card.estimated_bonus_value_usd || "").replace(/[^0-9]/g, ""), 10);
