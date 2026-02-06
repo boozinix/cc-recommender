@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Papa from "papaparse";
 import Link from "next/link";
@@ -67,7 +67,7 @@ function formatSpendRequirement(card: Card): string {
 // =========================================================
 // Comparison Page
 // =========================================================
-export default function ComparisonPage() {
+function ComparisonPageContent() {
   const searchParams = useSearchParams();
   const [cards, setCards] = useState<Card[]>([]);
   const [allCards, setAllCards] = useState<Card[]>([]);
@@ -314,5 +314,13 @@ export default function ComparisonPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+export default function ComparisonPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40, textAlign: "center", fontFamily: "system-ui" }}>Loading…</div>}>
+      <ComparisonPageContent />
+    </Suspense>
   );
 }

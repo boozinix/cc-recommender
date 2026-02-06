@@ -596,7 +596,7 @@ export default function Wizard() {
                 <button
                   key={option.value}
                   onClick={() =>
-                    setAnswers(prev => ({
+                    setAnswers((prev: Record<string, string | string[]>) => ({
                       ...prev,
                       [currentQuestion.id]: option.value
                     }))
