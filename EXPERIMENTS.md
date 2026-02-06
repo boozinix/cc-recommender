@@ -6,12 +6,14 @@ This guide explains how the code is **locked in** and how to run **experiments**
 
 ## What’s Locked In Right Now
 
-### Git tag: `v0.4` (current checkpoint)
-- **Tag:** `v0.4`
-- **Meaning:** Bonus-to-min-spend ratio in scoring; bonus display shows “if you spend $X in N months”; “Expected cashback” label; “Exclude travel cards?” refinement (when Bonus is primary); left-panel UI: boxed “Your answers” and “Refine your results” with hierarchy, pills, hover Edit, microcopy, and card-per-question refinements. Reversible blocks marked in code and in SAFETY_GUIDE.
-- **To return here:** `git checkout v0.4` or `git reset --hard v0.4` (on a branch).
+### Git tag: `v0.5` (current checkpoint)
+- **Tag:** `v0.5`
+- **Meaning:** Issuer approval rules as one multi-select question (5+/6+ in 24mo, 2+ in 60/90 days); checkboxes exclude Chase, Barclays, Citi, Amex per rule. Replaces single “how many cards in 24 months” question. Multi-select refinement UI. (Also includes v0.4: bonus ratio, spend-in-months, Expected cashback, Exclude travel cards, left-panel polish.)
+
+- **To return here:** `git checkout v0.5` or `git reset --hard v0.5` (on a branch).
 
 ### Other tags
+- **`v0.4`** – Bonus ratio, spend-in-months display, Expected cashback, Exclude travel cards, left-panel polish.
 - **`v0.3`** – Bank + brand logos, unified card layout; before bonus ratio and left-panel polish.
 - **`v0.2`** – Scoring, refinements, travel tier, alternate-list brand priority, UI phrasing; before logo work.
 - **`baseline-before-experiments`** – Code before any scoring/UX experiments (earlier snapshot).
