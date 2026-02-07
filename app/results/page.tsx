@@ -795,12 +795,15 @@ export default function ResultsPage() {
   const [enteringCardNames, setEnteringCardNames] = useState<Set<string>>(new Set());
   const [detailModalCard, setDetailModalCard] = useState<Card | null>(null);
   const [secondCardExpanded, setSecondCardExpanded] = useState(false);
+  const [otherTypeLeavingCards, setOtherTypeLeavingCards] = useState<Card[]>([]);
+  const [otherTypeEnteringCardNames, setOtherTypeEnteringCardNames] = useState<Set<string>>(new Set());
+  const otherTypePrevRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!ENABLE_CARD_ANIMATIONS) return;
     const visible = rankedCards.slice(0, showMoreMain);
     const prev = previousVisibleRef.current;
-    const leaving = prev.filter(p => !rankedCards.some(r => r.card_name === p.card_name));
+    const leaving = prev.filter(p => !visible.some(r => r.card_name === p.card_name));
     const entering = visible.filter(c => !prev.some(p => p.card_name === c.card_name));
     // Keep cards already leaving so their animation isn't cut short when refinement changes again (e.g. toggling approval rules)
     setLeavingCards(prevLeaving => {
@@ -963,9 +966,24 @@ export default function ResultsPage() {
     return deduped;
   }, [cards, answers, ownedCards, wantsAirlineBrand, wantsHotelBrand]);
 
-
-
-
+  // Other-type section: enter/leave animation when toggling Show/Hide business or personal cards
+  useEffect(() => {
+    if (!ENABLE_CARD_ANIMATIONS || otherTypeCards.length === 0) return;
+    const wasOpen = otherTypePrevRef.current;
+    otherTypePrevRef.current = showOtherType;
+    if (showOtherType && !wasOpen) {
+      setOtherTypeEnteringCardNames(new Set(otherTypeCards.map(c => c.card_name)));
+      const t = setTimeout(() => setOtherTypeEnteringCardNames(new Set()), 600);
+      return () => clearTimeout(t);
+    }
+    if (!showOtherType && wasOpen) {
+      setOtherTypeLeavingCards([...otherTypeCards]);
+      const t = setTimeout(() => {
+        setOtherTypeLeavingCards([]);
+      }, 600);
+      return () => clearTimeout(t);
+    }
+  }, [showOtherType, otherTypeCards]);
 
   // ---------------------
   // Issuer Warnings
@@ -1495,7 +1513,7 @@ export default function ResultsPage() {
                   </div>
                 )}
 
-                <div className="results-card-tile-actions" style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div className="results-card-tile-actions" style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div>
                     {card.application_link && (
                       <a
@@ -1690,7 +1708,7 @@ export default function ResultsPage() {
                     )}
                   </div>
                 )}
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div>
                     {card.application_link && (
                       <a
@@ -1831,7 +1849,12 @@ export default function ResultsPage() {
 
 
         <button
-          onClick={() => setShowOtherType(prev => !prev)}
+          onClick={() => {
+            if (showOtherType && ENABLE_CARD_ANIMATIONS && otherTypeCards.length > 0) {
+              setOtherTypeLeavingCards([...otherTypeCards]);
+            }
+            setShowOtherType(prev => !prev);
+          }}
           style={{
             padding: "10px 18px",
             borderRadius: 8,
@@ -1874,16 +1897,47 @@ export default function ResultsPage() {
         )}
 
 
-        {showOtherType && otherTypeCards.length > 0 && (
+        {(showOtherType && otherTypeCards.length > 0) || (ENABLE_CARD_ANIMATIONS && otherTypeLeavingCards.length > 0) ? (
           <>
             <h3 style={{ marginTop: 28, marginBottom: 12 }}>
               Top{" "}
               {answers.card_mode === "personal" ? "Business" : "Personal"} Cards
             </h3>
 
-
-
-            {otherTypeCards.map(card => {
+            {otherTypeLeavingCards.length > 0 ? (
+              otherTypeLeavingCards.map(card => {
+                const style = getIssuerStyle(card.issuer);
+                const bonusDisplay = formatBonusDisplay(card);
+                const rewardLabel = getRewardModelLabel(card.reward_model);
+                const cashbackDisplay = getCashbackDisplay(card);
+                const bankLogo = getBankLogoPath(card.issuer);
+                const brandLogo = getBrandLogoPath(card);
+                return (
+                  <div key={card.card_name} className="card-leave" style={{ marginBottom: 20 }}>
+                    <div style={{ display: "flex", gap: 16, background: "var(--surface-elevated)", borderRadius: 14, padding: 16, marginBottom: 20, border: "2px solid var(--card-tile-border)", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                      <div style={{ width: 72, minWidth: 72, height: 72, borderRadius: 10, background: bankLogo ? "transparent" : "linear-gradient(145deg, var(--pill-bg) 0%, var(--border) 100%)", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {bankLogo ? <img src={bankLogo} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : null}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>{card.card_name}</h3>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                            {brandLogo && <img src={brandLogo} alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, alignItems: "center" }}>
+                          <span style={{ background: style.bg, color: style.text, padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{card.issuer}</span>
+                          {rewardLabel && <span style={{ background: "var(--pill-bg)", color: "var(--pill-text)", padding: "4px 8px", borderRadius: 6, fontSize: 11 }}>{rewardLabel}</span>}
+                        </div>
+                        {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "var(--bonus-text)", background: "var(--bonus-bg)", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+            otherTypeCards.map((card) => {
+              const isEntering = ENABLE_CARD_ANIMATIONS && otherTypeEnteringCardNames.has(card.card_name);
               const style = getIssuerStyle(card.issuer);
               const bonusDisplay = formatBonusDisplay(card);
               const rewardLabel = getRewardModelLabel(card.reward_model);
@@ -1894,13 +1948,18 @@ export default function ResultsPage() {
               return (
                 <div
                   key={card.card_name}
+                  className={isEntering ? "card-enter" : ""}
+                  style={{
+                    marginBottom: 20
+                  }}
+                >
+                <div
                   style={{
                     display: "flex",
                     gap: 16,
                     background: "var(--surface-elevated)",
                     borderRadius: 14,
                     padding: 16,
-                    marginBottom: 20,
                     border: "2px solid var(--card-tile-border)",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
                   }}
@@ -1946,7 +2005,7 @@ export default function ResultsPage() {
                         )}
                       </div>
                     )}
-                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                       <div>
                         {card.application_link && (
                           <a
@@ -2000,10 +2059,12 @@ export default function ResultsPage() {
                     </div>
                   </div>
                 </div>
+                </div>
               );
-            })}
+            })
+            )}
           </>
-        )}
+        ) : null}
 
 
 
