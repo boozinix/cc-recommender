@@ -7,7 +7,7 @@ Track of major checkpoints and what changed in each. Git tag and commit are list
 ## v0.12 — **Canon** (current)
 
 **Tag:** `v0.12`  
-**Commit:** `a33118b`  
+**Commit:** `8604a17`  
 **Date:** Feb 2025
 
 Canon checkpoint. Restore to this if you need to undo later changes.
