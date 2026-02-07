@@ -798,14 +798,14 @@ export default function ResultsPage() {
     setAnswers({ ...storedAnswers, card_mode: cardMode || "" });
 
 
-    fetch("/cards.csv")
-      .then(res => res.text())
-      .then(text => {
-        const parsed = Papa.parse<Card>(text, {
-          header: true,
-          skipEmptyLines: true
-        });
-        setCards(parsed.data);
+    Promise.all([fetch("/cards.csv").then(r => r.text()), fetch("/banks.csv").then(r => r.text())])
+      .then(([cardsText, banksText]) => {
+        const bankRows = Papa.parse<{ issuer: string; bank_rules: string }>(banksText, { header: true, skipEmptyLines: true }).data;
+        const bankRulesMap: Record<string, string> = {};
+        bankRows.forEach(b => { if (b.issuer) bankRulesMap[b.issuer] = b.bank_rules || ""; });
+        const parsed = Papa.parse<Card>(cardsText, { header: true, skipEmptyLines: true });
+        const enriched = parsed.data.map(c => ({ ...c, bank_rules: bankRulesMap[c.issuer] ?? c.bank_rules ?? "" }));
+        setCards(enriched);
       });
   }, []);
 
@@ -1273,7 +1273,19 @@ export default function ResultsPage() {
             .card-leave { animation: cardLeave 0.35s ease-out forwards; }
           `}} />
         )}
-        <h2 style={{ marginBottom: 20 }}>Best cards for you</h2>
+        <h2
+          style={{
+            marginBottom: 20,
+            fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
+            fontWeight: 700,
+            fontSize: 26,
+            letterSpacing: "-0.03em",
+            lineHeight: 1.25,
+            color: "var(--text-primary)"
+          }}
+        >
+          Your top picks — based on your answers
+        </h2>
 
 
 
@@ -1740,6 +1752,30 @@ export default function ResultsPage() {
               } cards too`}
         </button>
 
+
+        {compareCards.length >= 2 && (
+          <div style={{ marginTop: 24 }}>
+            <button
+              onClick={() => {
+                const q = compareCards.map(c => encodeURIComponent(c)).join(",");
+                router.push(`/comparison?cards=${q}`);
+              }}
+              style={{
+                padding: "12px 28px",
+                borderRadius: 8,
+                border: "none",
+                background: theme.primary,
+                color: "#ffffff",
+                fontWeight: 600,
+                fontSize: 15,
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+              }}
+            >
+              Compare {compareCards.length} cards →
+            </button>
+          </div>
+        )}
 
 
         {showOtherType && otherTypeCards.length > 0 && (

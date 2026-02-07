@@ -82,8 +82,8 @@ body {
 }
 
 .results-left {
-  max-height: calc(100vh - 80px);
-  overflow-y: auto;
+  /* No max-height: left panel grows with content so 2–3 questions don’t need a scroll */
+  min-height: 0;
 }
 
 .results-right {

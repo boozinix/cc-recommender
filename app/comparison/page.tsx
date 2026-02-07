@@ -176,14 +176,17 @@ function ComparisonPageContent() {
   const theme = getTheme(compareThemeMode);
 
   useEffect(() => {
-    fetch("/cards.csv")
-      .then((res) => res.text())
-      .then((text) => {
-        const parsed = Papa.parse<Card>(text, {
-          header: true,
-          skipEmptyLines: true
-        });
-        setAllCards(parsed.data);
+    Promise.all([
+      fetch("/cards.csv").then((r) => r.text()),
+      fetch("/banks.csv").then((r) => r.text())
+    ])
+      .then(([cardsText, banksText]) => {
+        const bankRows = Papa.parse<{ issuer: string; bank_rules: string }>(banksText, { header: true, skipEmptyLines: true }).data;
+        const bankRulesMap: Record<string, string> = {};
+        bankRows.forEach((b) => { if (b.issuer) bankRulesMap[b.issuer] = b.bank_rules || ""; });
+        const parsed = Papa.parse<Card>(cardsText, { header: true, skipEmptyLines: true });
+        const enriched = parsed.data.map((c) => ({ ...c, bank_rules: bankRulesMap[c.issuer] ?? c.bank_rules ?? "" }));
+        setAllCards(enriched);
       })
       .catch(() => setError("Could not load cards."))
       .finally(() => setLoading(false));
