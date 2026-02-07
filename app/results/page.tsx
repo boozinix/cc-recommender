@@ -224,7 +224,7 @@ const refinementQuestions = [
     question: "What kind of travel rewards do you prefer?",
     dependsOn: (answers: Answers) => {
       const { primary } = getGoalRanks(answers);
-      return primary === "Travel" && answers.exclude_travel_cards !== "Yes";
+      return (primary === "Travel" || primary === "Bonus") && answers.exclude_travel_cards !== "Yes";
     },
     options: [
       { value: "General", label: "General" },
@@ -235,8 +235,10 @@ const refinementQuestions = [
   {
     id: "preferred_airline",
     question: "Which airline do you usually fly?",
-    dependsOn: (answers: Answers) =>
-      answers.travel_rewards_type === "Airline" && answers.exclude_travel_cards !== "Yes",
+    dependsOn: (answers: Answers) => {
+      const { primary } = getGoalRanks(answers);
+      return (primary === "Travel" || primary === "Bonus") && answers.travel_rewards_type === "Airline" && answers.exclude_travel_cards !== "Yes";
+    },
     options: [
       { value: "United", label: "United" },
       { value: "Delta", label: "Delta" },
@@ -253,8 +255,10 @@ const refinementQuestions = [
   {
     id: "preferred_hotel",
     question: "Which hotel brand do you prefer?",
-    dependsOn: (answers: Answers) =>
-      answers.travel_rewards_type === "Hotel" && answers.exclude_travel_cards !== "Yes",
+    dependsOn: (answers: Answers) => {
+      const { primary } = getGoalRanks(answers);
+      return (primary === "Travel" || primary === "Bonus") && answers.travel_rewards_type === "Hotel" && answers.exclude_travel_cards !== "Yes";
+    },
     options: [
       { value: "Marriott", label: "Marriott" },
       { value: "Hilton", label: "Hilton" },
@@ -1030,7 +1034,7 @@ export default function ResultsPage() {
             <button
               key={mode}
               type="button"
-              className="results-tap-target"
+              className={`results-tap-target results-mode-btn ${(answers.card_mode || "personal") !== mode ? "results-mode-btn-unselected" : ""}`}
               onClick={() => {
                 setAnswers(prev => ({ ...prev, card_mode: mode }));
                 if (typeof localStorage !== "undefined") {

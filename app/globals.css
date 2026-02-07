@@ -185,4 +185,8 @@ body {
   .wizard-continue-btn {
     color: #ffffff !important;
   }
+  .results-mode-btn-unselected,
+  .wizard-mode-btn-unselected {
+    color: var(--text-primary) !important;
+  }
 }

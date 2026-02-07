@@ -328,6 +328,7 @@ export default function Wizard() {
         {["personal", "business"].map(mode => (
           <button
             key={mode}
+            className={cardMode !== mode ? "wizard-mode-btn-unselected" : ""}
             onClick={() => handleModeChange(mode as any)}
             style={{
               padding: "10px 20px",

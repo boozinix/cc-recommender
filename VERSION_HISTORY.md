@@ -4,7 +4,27 @@ Track of major checkpoints and what changed in each. Git tag and commit are list
 
 ---
 
-## v0.11 — **Current**
+## v0.12 — **Canon** (current)
+
+**Tag:** `v0.12`  
+**Commit:** `a33118b`  
+**Date:** Feb 2025
+
+Canon checkpoint. Restore to this if you need to undo later changes.
+
+### What changed (since v0.11)
+- **Bonus + include travel:** When primary is Sign up bonus and user chooses "Include travel cards", refinement now shows "What kind of travel rewards?" and (if Airline/Hotel) airline or hotel preference so users can target high-bonus airline/hotel cards.
+- **Dark mode:** Personal/Business toggle unselected button ("Business" / "Personal") uses readable light text in dark mode on both results and wizard (same as other similar buttons).
+- **Docs:** `REFINEMENT_QUESTION_TREE.md` updated for Bonus branch (include-travel path with travel type and airline/hotel follow-ups).
+
+### How to restore this version
+```bash
+git checkout v0.12
+```
+
+---
+
+## v0.11
 
 **Tag:** `v0.11`  
 **Commit:** `0c94d0f`  

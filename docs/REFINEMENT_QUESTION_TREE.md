@@ -27,7 +27,10 @@ Wizard Q1: Rank goals (1st = primary)
     ├── Primary = 🎁 Signup bonus
     │       │
     │       ├── Exclude travel and hotel branded cards?  [No, include / Yes, exclude]
-    │       │       └── (If "Yes, exclude" → no travel-type or airline/hotel questions)
+    │       │       ├── If "No, include" → What kind of travel rewards?  [General / Airline / Hotel]
+    │       │       │       ├── If Airline → Which airline do you usually fly?  [United, Delta, …]
+    │       │       │       └── If Hotel  → Which hotel brand do you prefer?  [Marriott, Hilton, …]
+    │       │       └── If "Yes, exclude" → no travel-type or airline/hotel questions
     │       └── Do any of these approval rules apply to you?  [always shown]
     │
     └── Primary = 🧾 Everyday spending
@@ -44,7 +47,7 @@ Wizard Q1: Rank goals (1st = primary)
 |------------------------|-------------------------------------------|
 | **Cashback**           | 0% intro APR? • Approval rules            |
 | **Travel**             | Travel rewards type? → (if Airline: airline? \| if Hotel: hotel?) • Premium/mid-tier? • Approval rules |
-| **Bonus**              | Exclude travel and hotel cards? • Approval rules |
+| **Bonus**              | Exclude travel and hotel cards? • (if include travel) Travel rewards type? → airline? / hotel? • Approval rules |
 | **Everyday**           | 0% intro APR? • Approval rules            |
 
 **Approval rules** (“Do any of these approval rules apply to you?”) is shown for every primary goal.
@@ -55,4 +58,4 @@ Wizard Q1: Rank goals (1st = primary)
 
 - **Travel** and **Bonus** never show the 0% APR question.
 - **Travel** shows travel-type and premium/mid-tier only when the user did not choose “Exclude travel and hotel” (that question is Bonus-only).
-- **Bonus** shows “Exclude travel and hotel branded cards?” first; if they choose “Yes”, no airline/hotel preference questions appear.
+- **Bonus** shows “Exclude travel and hotel branded cards?” first. If they choose “No, include travel cards”, they then see “What kind of travel rewards?” and (if Airline/Hotel) airline or hotel preference, so they can target high-bonus airline/hotel cards.
