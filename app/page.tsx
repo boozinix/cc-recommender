@@ -9,6 +9,27 @@
 
 import { useState, useRef, useEffect } from "react";
 import { promptToAnswers } from "./lib/promptToAnswers";
+import { STORAGE_KEY } from "./lib/friends";
+
+const FORMSPREE_ENDPOINT = process.env.NEXT_PUBLIC_FORMSPREE_ID
+  ? `https://formspree.io/f/${process.env.NEXT_PUBLIC_FORMSPREE_ID}`
+  : null;
+
+function logPrompt(prompt: string, outcome: "success" | "error", errorMessage?: string) {
+  if (!FORMSPREE_ENDPOINT) return;
+  const friendId = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) || "Unknown" : "Unknown";
+  fetch(FORMSPREE_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      _subject: `Prompt: ${outcome}`,
+      prompt,
+      outcome,
+      error_message: errorMessage || "",
+      friend_identifier: friendId,
+    }),
+  }).catch(() => {});
+}
 
 type SpeechRecognitionInstance = {
   continuous: boolean;
@@ -74,9 +95,11 @@ export default function Home() {
     const trimmed = prompt.trim();
     const result = promptToAnswers(trimmed);
     if (!result.ok) {
+      logPrompt(trimmed, "error", result.error);
       setError(result.error);
       return;
     }
+    logPrompt(trimmed, "success");
     localStorage.setItem("answers", JSON.stringify(result.answers));
     localStorage.setItem("card_mode", (result.answers.card_mode as string) || "personal");
     window.location.href = "/results";
@@ -84,6 +107,7 @@ export default function Home() {
 
   return (
     <div
+      className="home-page"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -135,6 +159,7 @@ export default function Home() {
           {speechSupported && (
             <button
               type="button"
+              className="home-voice-btn"
               onClick={toggleListening}
               title={isListening ? "Stop listening" : "Voice input"}
               aria-label={isListening ? "Stop listening" : "Start voice input"}
@@ -171,6 +196,7 @@ export default function Home() {
         )}
         <button
           type="submit"
+          className="home-primary-btn"
           disabled={!prompt.trim()}
           style={{
             padding: "12px 24px",
@@ -193,6 +219,7 @@ export default function Home() {
 
       <a
         href="/wizard"
+        className="home-wizard-link"
         style={{
           padding: "14px 28px",
           borderRadius: 10,

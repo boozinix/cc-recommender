@@ -305,6 +305,7 @@ export default function Wizard() {
   // =======================
   return (
     <div
+      className="wizard-page"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -324,11 +325,11 @@ export default function Wizard() {
       {/* =======================
           Personal / Business Toggle
          ======================= */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 28 }}>
+      <div className="wizard-mode-toggle" style={{ display: "flex", gap: 12, marginBottom: 28 }}>
         {["personal", "business"].map(mode => (
           <button
             key={mode}
-            className={cardMode !== mode ? "wizard-mode-btn-unselected" : ""}
+            className={`tap-target ${cardMode !== mode ? "wizard-mode-btn-unselected" : ""}`}
             onClick={() => handleModeChange(mode as any)}
             style={{
               padding: "10px 20px",
@@ -348,7 +349,7 @@ export default function Wizard() {
 
 
 
-      <div style={{ width: 300, marginBottom: 24 }}>
+      <div className="wizard-progress-wrap" style={{ width: 300, marginBottom: 24 }}>
         <div style={{ fontSize: 14, marginBottom: 6 }}>
           Step {step + 1} of {questions.length}
         </div>
@@ -479,6 +480,7 @@ export default function Wizard() {
                   return (
                     <div
                       key={goal}
+                      className="wizard-ranking-row"
                       draggable
                       onDragStart={e => handleDragStart(e, index)}
                       onDragEnd={handleDragEnd}
@@ -539,12 +541,14 @@ export default function Wizard() {
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0, padding: "14px 14px 14px 16px" }}>
                         <span>{index + 1}. {label}</span>
                         <div
+                          className="wizard-rank-buttons"
                           style={{ display: "flex", gap: 4, flexShrink: 0 }}
                           onClick={e => e.stopPropagation()}
                           onPointerDown={e => e.stopPropagation()}
                         >
                           <button
                             type="button"
+                            className="tap-target"
                             aria-label="Move up"
                             disabled={!canMoveUp}
                             onClick={() => moveRank(index, "up")}
@@ -562,6 +566,7 @@ export default function Wizard() {
                           </button>
                           <button
                             type="button"
+                            className="tap-target"
                             aria-label="Move down"
                             disabled={!canMoveDown}
                             onClick={() => moveRank(index, "down")}
@@ -593,11 +598,11 @@ export default function Wizard() {
               Standard Questions
              ======================= */}
           {!isRankingStep && (
-            <div style={{ display: "grid", gap: 16 }}>
+            <div className="wizard-options-grid" style={{ display: "grid", gap: 16 }}>
               {currentQuestion.options.map(option => (
                 <button
                   key={option.value}
-                  className={answers[currentQuestion.id] === option.value ? "wizard-option-btn wizard-option-btn-selected" : "wizard-option-btn"}
+                  className={`tap-target ${answers[currentQuestion.id] === option.value ? "wizard-option-btn wizard-option-btn-selected" : "wizard-option-btn"}`}
                   onClick={() =>
                     setAnswers((prev: Record<string, string | string[]>) => ({
                       ...prev,
@@ -634,6 +639,7 @@ export default function Wizard() {
               Navigation Buttons
              ======================= */}
           <div
+            className="wizard-nav-buttons"
             style={{
               display: "flex",
               justifyContent: "space-between",
@@ -641,6 +647,7 @@ export default function Wizard() {
             }}
           >
             <button
+              className="wizard-back-btn"
               onClick={handleBack}
               style={{
                 padding: "12px 20px",

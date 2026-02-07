@@ -129,6 +129,161 @@ body {
   .results-card-pros-cons {
     grid-template-columns: 1fr !important;
   }
+
+  /* Card tile: stack logo above content on very small screens for readability */
+  .results-card-tile {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 12px !important;
+    gap: 10px !important;
+  }
+  .results-card-tile .results-card-tile-logo {
+    width: 56px;
+    min-width: 56px;
+    height: 56px;
+  }
+  .results-card-tile-actions {
+    flex-direction: column;
+    align-items: center;
+    margin-top: 8px !important;
+    padding-top: 8px !important;
+  }
+  .results-card-tile-actions .results-apply-btn,
+  .results-card-tile-actions label {
+    min-height: 44px;
+    justify-content: center;
+  }
+  /* Tighter spacing on mobile: less white space in card tiles */
+  .results-card-wrap {
+    margin-bottom: 12px !important;
+  }
+  .results-card-best-for {
+    margin-top: 6px !important;
+  }
+  .results-card-bonus {
+    margin-top: 6px !important;
+  }
+  .results-right > h2 {
+    margin-bottom: 12px !important;
+  }
+}
+
+/* ========== Mobile: tap targets (min 44px) and safe areas ========== */
+@media (max-width: 768px) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+}
+
+/* Fixed elements: avoid notch/home indicator (position from safe edges) */
+@supports (bottom: env(safe-area-inset-bottom)) {
+  .fixed-bottom-safe {
+    bottom: max(24px, env(safe-area-inset-bottom)) !important;
+  }
+}
+@supports (right: env(safe-area-inset-right)) {
+  .fixed-right-safe {
+    right: max(24px, env(safe-area-inset-right)) !important;
+  }
+}
+
+/* ========== Wizard: mobile layout ========== */
+@media (max-width: 600px) {
+  .wizard-page {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .wizard-progress-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .wizard-options-grid button {
+    min-height: 48px;
+    padding: 14px 20px !important;
+    font-size: 16px !important;
+  }
+  .wizard-nav-buttons .wizard-back-btn,
+  .wizard-nav-buttons .wizard-continue-btn {
+    min-height: 44px;
+    padding: 12px 20px !important;
+  }
+  .wizard-mode-toggle button {
+    min-height: 44px;
+    padding: 12px 20px !important;
+  }
+  .wizard-ranking-row {
+    flex-wrap: wrap;
+  }
+  .wizard-ranking-row .wizard-rank-buttons {
+    margin-top: 4px;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* ========== Home: mobile typography and spacing ========== */
+@media (max-width: 600px) {
+  .home-page h1 {
+    font-size: 28px !important;
+    line-height: 1.2 !important;
+  }
+  .home-page {
+    padding: 16px !important;
+  }
+  .home-voice-btn {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+  }
+  .home-primary-btn,
+  .home-wizard-link {
+    min-height: 44px;
+    padding: 14px 24px !important;
+  }
+}
+
+/* ========== Card detail modal: mobile full-bleed ========== */
+@media (max-width: 600px) {
+  .card-detail-modal-overlay {
+    padding: 12px !important;
+    align-items: flex-start !important;
+  }
+  .card-detail-modal-content {
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+  }
+  .card-detail-modal-close {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 12px !important;
+  }
+}
+
+/* ========== Comparison page: mobile padding ========== */
+@media (max-width: 600px) {
+  .comparison-page-wrap {
+    padding: 16px !important;
+  }
+}
+
+/* ========== Refinement: show/hide toggle only on mobile ========== */
+.refinement-mobile-toggle {
+  display: none !important;
+}
+@media (max-width: 900px) {
+  .refinement-mobile-toggle {
+    display: inline-flex !important;
+  }
+  /* On mobile only, hide refinement content when collapsed */
+  .refinement-content-collapsed {
+    display: none !important;
+  }
 }
 
 /* ========== Results left panel: dark-mode-only overrides ========== */

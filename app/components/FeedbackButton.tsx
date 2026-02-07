@@ -46,6 +46,7 @@ export function FeedbackButton() {
       {/* Floating chat icon */}
       <button
         type="button"
+        className="fixed-bottom-safe fixed-right-safe tap-target"
         onClick={() => setOpen(!open)}
         aria-label="Give feedback"
         style={{

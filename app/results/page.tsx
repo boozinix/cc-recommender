@@ -10,6 +10,12 @@ import { useRouter } from "next/navigation";
 import Papa from "papaparse";
 import { getTheme, type CardMode } from "@/app/lib/theme";
 import { FeedbackButton } from "@/app/components/FeedbackButton";
+import {
+  ENABLE_CARD_DETAIL_OPTION_1_MODAL,
+  ENABLE_CARD_DETAIL_OPTION_2_EXPAND,
+  CardDetailOption1Modal,
+  CardDetailOption2Expand,
+} from "@/app/components/card-detail";
 
 
 
@@ -40,6 +46,8 @@ type Card = {
   signup_bonus_type: string;
   bank_rules?: string;
   application_link?: string;
+  special_feature_1?: string;
+  special_feature_2?: string;
 };
 
 
@@ -779,11 +787,14 @@ export default function ResultsPage() {
   const [showOtherType, setShowOtherType] = useState(false);
   const [showMoreMain, setShowMoreMain] = useState<3 | 6 | 9>(3);
   const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
+  const [refinementOpen, setRefinementOpen] = useState(false);
 
   // Enter/leave animation when refinement changes the result set (optional)
   const previousVisibleRef = useRef<Card[]>([]);
   const [leavingCards, setLeavingCards] = useState<Card[]>([]);
   const [enteringCardNames, setEnteringCardNames] = useState<Set<string>>(new Set());
+  const [detailModalCard, setDetailModalCard] = useState<Card | null>(null);
+  const [secondCardExpanded, setSecondCardExpanded] = useState(false);
 
   useEffect(() => {
     if (!ENABLE_CARD_ANIMATIONS) return;
@@ -1158,6 +1169,7 @@ export default function ResultsPage() {
 
         {/* ========== REVERSIBLE: Refine box (same style as Your answers, card per question) ========== */}
         <div
+          className="results-refine-box"
           style={{
             marginBottom: 24,
             border: "1px solid var(--border)",
@@ -1168,17 +1180,38 @@ export default function ResultsPage() {
         >
           <div
             style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
               fontSize: 14,
               fontWeight: 700,
               color: "var(--text-secondary)",
               padding: "12px 14px",
               background: "var(--gradient-header)",
-              borderBottom: "1px solid var(--border)"
+              borderBottom: refinementOpen ? "1px solid var(--border)" : "none"
             }}
           >
-            Refine your results
+            <span>Refine your results</span>
+            <button
+              type="button"
+              className="refinement-mobile-toggle tap-target"
+              onClick={() => setRefinementOpen((prev) => !prev)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+                background: "var(--surface-elevated)",
+                color: "var(--text-secondary)",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              {refinementOpen ? "Hide" : "Show refinement questions"}
+            </button>
           </div>
-          <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className={`refinement-content ${refinementOpen ? "" : "refinement-content-collapsed"}`} style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 14 }}>
             {visibleRefinements.map(q => (
               <div
                 key={q.id}
@@ -1206,6 +1239,7 @@ export default function ResultsPage() {
                       return (
                         <label
                           key={option.value}
+                          className="tap-target"
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -1239,7 +1273,7 @@ export default function ResultsPage() {
                     q.options.map(option => (
                       <button
                         key={option.value}
-                        className={`results-refine-option-btn ${answers[q.id] === option.value ? "selected" : ""}`}
+                        className={`tap-target results-refine-option-btn ${answers[q.id] === option.value ? "selected" : ""}`}
                         onClick={() =>
                           setAnswers(prev => ({ ...prev, [q.id]: option.value }))
                         }
@@ -1301,7 +1335,7 @@ export default function ResultsPage() {
 
 
 
-        {rankedCards.slice(0, showMoreMain).map(card => {
+        {rankedCards.slice(0, showMoreMain).map((card, index) => {
           const style = getIssuerStyle(card.issuer);
           const bonusDisplay = formatBonusDisplay(card);
           const rewardLabel = getRewardModelLabel(card.reward_model);
@@ -1309,14 +1343,17 @@ export default function ResultsPage() {
           const bankLogo = getBankLogoPath(card.issuer);
           const brandLogo = getBrandLogoPath(card);
           const isEntering = ENABLE_CARD_ANIMATIONS && enteringCardNames.has(card.card_name);
+          const isFirstCard = index === 0;
+          const isSecondCard = index === 1;
 
           return (
             <div
               key={card.card_name}
-              className={isEntering ? "card-enter" : ""}
+              className={`results-card-wrap ${isEntering ? "card-enter" : ""}`}
               style={{ marginBottom: 20 }}
             >
               <div
+                className="results-card-tile"
                 style={{
                   display: "flex",
                   gap: 16,
@@ -1328,6 +1365,7 @@ export default function ResultsPage() {
                 }}
               >
               <div
+                className="results-card-tile-logo"
                 style={{
                   width: 72,
                   minWidth: 72,
@@ -1348,9 +1386,33 @@ export default function ResultsPage() {
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>
-                    {card.card_name}
-                  </h3>
+                  {isFirstCard && ENABLE_CARD_DETAIL_OPTION_1_MODAL ? (
+                    <button
+                      type="button"
+                      onClick={() => setDetailModalCard(card)}
+                      style={{
+                        margin: 0,
+                        padding: 0,
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        font: "inherit",
+                        fontSize: 18,
+                        fontWeight: 700,
+                        color: "var(--text-primary)",
+                        lineHeight: 1.3,
+                        textAlign: "left",
+                        textDecoration: "underline",
+                        textUnderlineOffset: 2
+                      }}
+                    >
+                      {card.card_name}
+                    </button>
+                  ) : (
+                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>
+                      {card.card_name}
+                    </h3>
+                  )}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                     {brandLogo && (
                       <img src={brandLogo} alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />
@@ -1397,14 +1459,14 @@ export default function ResultsPage() {
                 </div>
 
                 {bonusDisplay && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: "var(--bonus-text)", background: "var(--bonus-bg)", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>
+                  <div className="results-card-bonus" style={{ marginTop: 8, fontSize: 12, color: "var(--bonus-text)", background: "var(--bonus-bg)", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>
                     {bonusDisplay}
                   </div>
                 )}
 
                 {card.best_for && (
-                  <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>
-                    {card.best_for}
+                  <p className="results-card-best-for" style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>
+                    This card is best for: {card.best_for}
                   </p>
                 )}
 
@@ -1433,13 +1495,14 @@ export default function ResultsPage() {
                   </div>
                 )}
 
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div className="results-card-tile-actions" style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div>
                     {card.application_link && (
                       <a
                         href={card.application_link}
                         target="_blank"
                         rel="noopener noreferrer"
+                        className="results-apply-btn tap-target"
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
@@ -1458,6 +1521,7 @@ export default function ResultsPage() {
                     )}
                   </div>
                   <label
+                    className="tap-target"
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -1485,11 +1549,26 @@ export default function ResultsPage() {
                     {compareCards.includes(card.card_name) ? "✓ In compare" : "Add to compare"}
                   </label>
                 </div>
+
+                {isSecondCard && (
+                  <CardDetailOption2Expand
+                    card={card}
+                    theme={theme}
+                    expanded={secondCardExpanded}
+                    onToggle={() => setSecondCardExpanded(prev => !prev)}
+                  />
+                )}
               </div>
             </div>
             </div>
           );
         })}
+
+        <CardDetailOption1Modal
+          card={detailModalCard}
+          theme={theme}
+          onClose={() => setDetailModalCard(null)}
+        />
 
         {ENABLE_CARD_ANIMATIONS && leavingCards.length > 0 && leavingCards.map(card => {
           const style = getIssuerStyle(card.issuer);
@@ -1583,8 +1662,8 @@ export default function ResultsPage() {
                   </div>
                 )}
                 {card.best_for && (
-                  <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>
-                    {card.best_for}
+                  <p className="results-card-best-for" style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>
+                    This card is best for: {card.best_for}
                   </p>
                 )}
                 {SHOW_PROSCONS_ON_RESULTS_TILES && (
@@ -1611,7 +1690,7 @@ export default function ResultsPage() {
                     )}
                   </div>
                 )}
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div>
                     {card.application_link && (
                       <a
@@ -1850,7 +1929,7 @@ export default function ResultsPage() {
                       {cashbackDisplay && <span style={{ color: "var(--text-muted)", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>}
                     </div>
                     {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "var(--bonus-text)", background: "var(--bonus-bg)", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
-                    {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>{card.best_for}</p>}
+                    {card.best_for && <p className="results-card-best-for" style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>This card is best for: {card.best_for}</p>}
                     {SHOW_PROSCONS_ON_RESULTS_TILES && (
                       <div className="results-card-pros-cons">
                         {card.pros && (
@@ -1867,7 +1946,7 @@ export default function ResultsPage() {
                         )}
                       </div>
                     )}
-                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                       <div>
                         {card.application_link && (
                           <a
@@ -1984,7 +2063,7 @@ export default function ResultsPage() {
 {cashbackDisplay && <span style={{ color: "var(--text-muted)", fontSize: 11 }}>• Expected cashback {cashbackDisplay}</span>}
                       </div>
                     {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "var(--bonus-text)", background: "var(--bonus-bg)", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
-                    {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>{card.best_for}</p>}
+                    {card.best_for && <p className="results-card-best-for" style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>This card is best for: {card.best_for}</p>}
                     {SHOW_PROSCONS_ON_RESULTS_TILES && (
                       <div className="results-card-pros-cons">
                         {card.pros && (
