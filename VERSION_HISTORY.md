@@ -4,7 +4,28 @@ Track of major checkpoints and what changed in each. Git tag and commit are list
 
 ---
 
-## v0.8 — **Major checkpoint** (current)
+## v0.9 — **Checkpoint before experiments** (current)
+
+**Tag:** `v0.9`  
+**Commit:** `c140768`  
+**Date:** Feb 2025
+
+Saved state before running experiments. Use this to restore if you need to undo experiment changes.
+
+### What changed (since v0.8)
+- **Reward program names:** Results and comparison show proper names (Ultimate Rewards, Membership Rewards, Thank You Points, United miles, cash, etc.).
+- **Compare button:** Restored “Compare N cards →” on results when 2+ cards are selected.
+- **Left panel:** No max-height; panel grows with content so 2–3 questions don’t need a small scroll.
+- **Results heading:** “Your top picks — based on your answers” with Geist font and stronger typography.
+
+### How to restore this version
+```bash
+git checkout v0.9
+```
+
+---
+
+## v0.8 — **Major checkpoint**
 
 **Tag:** `v0.8`  
 **Commit:** `42c5508`  
