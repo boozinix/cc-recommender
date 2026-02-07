@@ -389,6 +389,7 @@ export default function Wizard() {
             {previousAnswers.map((item, idx) => (
               <div
                 key={idx}
+                className="wizard-prev-answer-row"
                 onClick={() => handleJumpToQuestion(item.stepIndex)}
                 style={{
                   fontSize: 13,
@@ -418,10 +419,10 @@ export default function Wizard() {
                 }}
               >
                 <div>
-                  <span style={{ fontWeight: 600, color: theme.primary }}>
+                  <span className="wizard-prev-answer-q" style={{ fontWeight: 600, color: theme.primary }}>
                     Q{item.stepNumber}:
                   </span>{" "}
-                  <span style={{ color: "var(--pill-text)" }}>{item.answer}</span>
+                  <span className="wizard-prev-answer-text" style={{ color: "var(--pill-text)" }}>{item.answer}</span>
                 </div>
                 <span style={{ fontSize: 11, opacity: 0.6, marginLeft: 8 }}>
                   ←
@@ -448,7 +449,7 @@ export default function Wizard() {
 
 
           {currentQuestion.helper && (
-            <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20 }}>
+            <div className="wizard-helper" style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20 }}>
               {currentQuestion.helper}
             </div>
           )}
@@ -595,6 +596,7 @@ export default function Wizard() {
               {currentQuestion.options.map(option => (
                 <button
                   key={option.value}
+                  className={answers[currentQuestion.id] === option.value ? "wizard-option-btn wizard-option-btn-selected" : "wizard-option-btn"}
                   onClick={() =>
                     setAnswers((prev: Record<string, string | string[]>) => ({
                       ...prev,
@@ -654,6 +656,7 @@ export default function Wizard() {
 
 
             <button
+              className="wizard-continue-btn"
               onClick={handleContinue}
               disabled={!isRankingStep && !selectedValue}
               style={{

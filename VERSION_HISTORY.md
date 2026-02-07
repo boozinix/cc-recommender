@@ -4,9 +4,31 @@ Track of major checkpoints and what changed in each. Git tag and commit are list
 
 ---
 
-## v0.10 — **Canon** (current)
+## v0.11 — **Current**
+
+**Tag:** `v0.11`  
+**Commit:** `73f70f1`  
+**Date:** Feb 2025
+
+### What changed (since v0.10)
+- **Dark mode (results):** Left-panel answer boxes and refinement option buttons use dark-mode-only CSS so text is readable (no white boxes, no invisible selected/option text).
+- **Dark mode (wizard):** "Your answers so far" rows, helper text, selected option button text, and Continue button use dark-mode-only overrides for readability.
+- **Hide button:** "Hide other card type" → dynamic "Hide business cards" / "Hide personal cards" depending on which type the section is showing.
+- **Card animation:** Enter/leave duration 0.35s → 0.55s; leave list merged on refinement change so rapid toggles don’t cut the animation short.
+- **0% APR question:** Reduced to 2 options: "Yes, 0% APR is important to me" / "No, I don't care about intro APR". Scoring and prompt parsing use value "Yes".
+- **Docs:** `docs/REFINEMENT_QUESTION_TREE.md` — tree of how wizard Q1 (primary goal) affects which refinement questions appear on the results page.
+
+### How to restore this version
+```bash
+git checkout v0.11
+```
+
+---
+
+## v0.10 — **Canon**
 
 **Tag:** `v0.10`  
+**Commit:** `03a7305`  
 **Date:** Feb 2025
 
 Canon checkpoint before further edits. Restore to this if you need to undo later changes.

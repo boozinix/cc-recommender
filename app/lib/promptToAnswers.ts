@@ -178,7 +178,7 @@ export function promptToAnswers(prompt: string): PromptResult {
   if (/\b(0%|zero)\s*apr\b/.test(lower) || /\bintro(ductory)?\s*apr\b/.test(lower) ||
       /\bbalance\s*transfer\b/.test(lower) || /\bcarry\s*(a\s*)?balance\b/.test(lower) ||
       /\blow\s*apr\b/.test(lower) || /\bno\s*interest\b/.test(lower) || /\bpay\s*over\s*time\b/.test(lower)) {
-    answers.needs_0_apr = "Yes, I plan to carry a balance";
+    answers.needs_0_apr = "Yes";
     matchedSomething = true;
   }
 

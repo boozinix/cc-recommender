@@ -289,9 +289,8 @@ const refinementQuestions = [
       return primary === "Everyday" || primary === "Cashback";
     },
     options: [
-      { value: "Yes, I plan to carry a balance", label: "Yes, I plan to carry a balance" },
-      { value: "No, I pay in full", label: "No, I pay in full" },
-      { value: "Doesn't matter", label: "Doesn't matter" }
+      { value: "Yes", label: "Yes, 0% APR is important to me" },
+      { value: "No", label: "No, I don't care about intro APR" }
     ]
   },
   {
@@ -570,7 +569,7 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
   // STEP 2: Special Case - 0% APR Requirement
   // =========================================================
   if (
-    answers.needs_0_apr === "Yes, I plan to carry a balance" &&
+    answers.needs_0_apr === "Yes" &&
     primary !== "Travel"
   ) {
     if (!hasIntroAPR(card)) return -9999;
@@ -788,13 +787,19 @@ export default function ResultsPage() {
     const prev = previousVisibleRef.current;
     const leaving = prev.filter(p => !rankedCards.some(r => r.card_name === p.card_name));
     const entering = visible.filter(c => !prev.some(p => p.card_name === c.card_name));
-    setLeavingCards(leaving);
+    // Keep cards already leaving so their animation isn't cut short when refinement changes again (e.g. toggling approval rules)
+    setLeavingCards(prevLeaving => {
+      const visibleNames = new Set(visible.map(c => c.card_name));
+      const stillLeaving = prevLeaving.filter(p => !visibleNames.has(p.card_name));
+      const newLeaving = leaving.filter(l => !stillLeaving.some(s => s.card_name === l.card_name));
+      return [...stillLeaving, ...newLeaving];
+    });
     setEnteringCardNames(prev.length > 0 ? new Set(entering.map(c => c.card_name)) : new Set());
     const tid = setTimeout(() => {
       setLeavingCards([]);
       setEnteringCardNames(new Set());
       previousVisibleRef.current = visible;
-    }, 400);
+    }, 600);
     return () => clearTimeout(tid);
   }, [rankedCards, showMoreMain]);
 
@@ -1082,6 +1087,7 @@ export default function ResultsPage() {
               return (
                 <div
                   key={q.id}
+                  className="results-left-answer-box"
                   onClick={() => {
                     if (typeof localStorage !== "undefined") {
                       localStorage.setItem("wizard_step", String(stepIndex));
@@ -1104,6 +1110,7 @@ export default function ResultsPage() {
                   }}
                 >
                   <span
+                    className="results-left-q-pill"
                     style={{
                       display: "inline-block",
                       fontWeight: 700,
@@ -1117,7 +1124,7 @@ export default function ResultsPage() {
                   >
                     Q{stepIndex + 1}
                   </span>
-                  <span style={{ color: "var(--pill-text)" }}>{display}</span>
+                  <span className="results-left-answer-text" style={{ color: "var(--pill-text)" }}>{display}</span>
                   {isHovered && (
                     <span style={{ marginLeft: 8, fontSize: 11, color: theme.primary, fontWeight: 600 }}>Edit</span>
                   )}
@@ -1179,7 +1186,7 @@ export default function ResultsPage() {
                   boxShadow: "0 1px 2px rgba(0,0,0,0.04)"
                 }}
               >
-                <div style={{ fontWeight: 600, color: theme.primaryDark, fontSize: 14, marginBottom: 6 }}>
+                <div className="results-refine-question" style={{ fontWeight: 600, color: theme.primaryDark, fontSize: 14, marginBottom: 6 }}>
                   {q.question}
                 </div>
                 {"helper" in q && q.helper && (
@@ -1228,6 +1235,7 @@ export default function ResultsPage() {
                     q.options.map(option => (
                       <button
                         key={option.value}
+                        className={`results-refine-option-btn ${answers[q.id] === option.value ? "selected" : ""}`}
                         onClick={() =>
                           setAnswers(prev => ({ ...prev, [q.id]: option.value }))
                         }
@@ -1269,8 +1277,8 @@ export default function ResultsPage() {
               from { opacity: 1; transform: translateY(0); }
               to { opacity: 0; transform: translateY(24px); }
             }
-            .card-enter { animation: cardEnter 0.35s ease-out forwards; }
-            .card-leave { animation: cardLeave 0.35s ease-out forwards; }
+            .card-enter { animation: cardEnter 0.55s ease-out forwards; }
+            .card-leave { animation: cardLeave 0.55s ease-out forwards; }
           `}} />
         )}
         <h2
@@ -1751,7 +1759,7 @@ export default function ResultsPage() {
           }}
         >
           {showOtherType
-            ? "Hide other card type"
+            ? `Hide ${answers.card_mode === "personal" ? "business" : "personal"} cards`
             : `Show ${
                 answers.card_mode === "personal" ? "business" : "personal"
               } cards too`}

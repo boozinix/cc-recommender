@@ -1,0 +1,58 @@
+# Refinement questions: how wizard Q1 affects what appears on the results page
+
+The **first wizard question** is: **"Rank what you want this card to be best at"** with four options: Cashback, Travel, Signup bonus, Everyday spending.
+
+The **primary goal** is the **top-ranked** choice. It controls which refinement questions appear in the **"Refine your results"** panel on the results page.
+
+---
+
+## Tree: Primary goal → refinement questions shown
+
+```
+Wizard Q1: Rank goals (1st = primary)
+    │
+    ├── Primary = 💰 Cashback
+    │       │
+    │       ├── Do you need a 0% intro APR?  [Yes / No]
+    │       └── Do any of these approval rules apply to you?  [always shown]
+    │
+    ├── Primary = ✈️ Travel
+    │       │
+    │       ├── What kind of travel rewards do you prefer?  [General / Airline / Hotel]
+    │       │       ├── If Airline → Which airline do you usually fly?  [United, Delta, …]
+    │       │       └── If Hotel  → Which hotel brand do you prefer?  [Marriott, Hilton, …]
+    │       ├── Do you prefer a premium or mid-tier travel card?  [Premium / Mid-tier / No preference]
+    │       └── Do any of these approval rules apply to you?  [always shown]
+    │
+    ├── Primary = 🎁 Signup bonus
+    │       │
+    │       ├── Exclude travel and hotel branded cards?  [No, include / Yes, exclude]
+    │       │       └── (If "Yes, exclude" → no travel-type or airline/hotel questions)
+    │       └── Do any of these approval rules apply to you?  [always shown]
+    │
+    └── Primary = 🧾 Everyday spending
+            │
+            ├── Do you need a 0% intro APR?  [Yes / No]
+            └── Do any of these approval rules apply to you?  [always shown]
+```
+
+---
+
+## Summary table
+
+| Primary (wizard Q1 #1) | Refinement questions shown (results page) |
+|------------------------|-------------------------------------------|
+| **Cashback**           | 0% intro APR? • Approval rules            |
+| **Travel**             | Travel rewards type? → (if Airline: airline? \| if Hotel: hotel?) • Premium/mid-tier? • Approval rules |
+| **Bonus**              | Exclude travel and hotel cards? • Approval rules |
+| **Everyday**           | 0% intro APR? • Approval rules            |
+
+**Approval rules** (“Do any of these approval rules apply to you?”) is shown for every primary goal.
+
+---
+
+## Notes
+
+- **Travel** and **Bonus** never show the 0% APR question.
+- **Travel** shows travel-type and premium/mid-tier only when the user did not choose “Exclude travel and hotel” (that question is Bonus-only).
+- **Bonus** shows “Exclude travel and hotel branded cards?” first; if they choose “Yes”, no airline/hotel preference questions appear.

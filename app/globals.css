@@ -130,3 +130,59 @@ body {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ========== Results left panel: dark-mode-only overrides ========== */
+@media (prefers-color-scheme: dark) {
+  .results-left-answer-box {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    border-left-color: var(--border) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+  }
+  .results-left-answer-box:hover {
+    background: var(--surface-elevated) !important;
+    border-color: var(--border) !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25) !important;
+  }
+  .results-left-q-pill {
+    background: var(--surface-elevated) !important;
+    color: var(--text-primary) !important;
+  }
+  .results-left-answer-text {
+    color: var(--text-primary) !important;
+  }
+  .results-refine-option-btn {
+    color: var(--text-primary) !important;
+  }
+  .results-refine-option-btn.selected {
+    color: #ffffff !important;
+  }
+  .results-refine-question {
+    color: var(--text-primary) !important;
+  }
+}
+
+/* ========== Wizard: dark-mode-only overrides ========== */
+@media (prefers-color-scheme: dark) {
+  .wizard-prev-answer-row {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+  }
+  .wizard-prev-answer-row:hover {
+    background: var(--surface-elevated) !important;
+    border-color: var(--border) !important;
+  }
+  .wizard-prev-answer-q,
+  .wizard-prev-answer-text {
+    color: var(--text-primary) !important;
+  }
+  .wizard-helper {
+    color: var(--text-secondary) !important;
+  }
+  .wizard-option-btn-selected {
+    color: #1e293b !important;
+  }
+  .wizard-continue-btn {
+    color: #ffffff !important;
+  }
+}
