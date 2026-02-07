@@ -7,7 +7,7 @@ Track of major checkpoints and what changed in each. Git tag and commit are list
 ## v0.11 — **Current**
 
 **Tag:** `v0.11`  
-**Commit:** `73f70f1`  
+**Commit:** `0c94d0f`  
 **Date:** Feb 2025
 
 ### What changed (since v0.10)
