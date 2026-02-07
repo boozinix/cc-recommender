@@ -30,6 +30,7 @@ type Card = {
   cashback_rate_effective: string;
   estimated_bonus_value_usd: string;
   minimum_spend_amount?: string;
+  bonus_to_spend_ratio?: string;
   spend_time_frame?: string;
   intro_apr_purchase: string;
   best_for: string;
@@ -197,17 +198,33 @@ function getInitialAnswerDisplay(questionId: string, answerValue: unknown): stri
 // =========================================================
 const ENABLE_CARD_ANIMATIONS = true; // set false to disable (lighter code path)
 
+// Toggle: show Pros/Cons on result card tiles. Set to true to bring them back.
+const SHOW_PROSCONS_ON_RESULTS_TILES = false;
+
 // =========================================================
 // Refinement Questions Config
 // =========================================================
 // Same schema as wizard: id, question, optional helper, options: { value, label }[]
 const refinementQuestions = [
   {
+    id: "exclude_travel_cards",
+    question: "Exclude travel and hotel branded cards?",
+    helper: "When bonus is your main goal, results often include travel cards. Choose to see only cashback and other non-travel cards.",
+    dependsOn: (answers: Answers) => {
+      const { primary } = getGoalRanks(answers);
+      return primary === "Bonus";
+    },
+    options: [
+      { value: "No", label: "No, include travel cards" },
+      { value: "Yes", label: "Yes, exclude all travel and hotel cards" }
+    ]
+  },
+  {
     id: "travel_rewards_type",
     question: "What kind of travel rewards do you prefer?",
     dependsOn: (answers: Answers) => {
       const { primary } = getGoalRanks(answers);
-      return primary === "Travel";
+      return primary === "Travel" && answers.exclude_travel_cards !== "Yes";
     },
     options: [
       { value: "General", label: "General" },
@@ -219,7 +236,7 @@ const refinementQuestions = [
     id: "preferred_airline",
     question: "Which airline do you usually fly?",
     dependsOn: (answers: Answers) =>
-      answers.travel_rewards_type === "Airline",
+      answers.travel_rewards_type === "Airline" && answers.exclude_travel_cards !== "Yes",
     options: [
       { value: "United", label: "United" },
       { value: "Delta", label: "Delta" },
@@ -237,7 +254,7 @@ const refinementQuestions = [
     id: "preferred_hotel",
     question: "Which hotel brand do you prefer?",
     dependsOn: (answers: Answers) =>
-      answers.travel_rewards_type === "Hotel",
+      answers.travel_rewards_type === "Hotel" && answers.exclude_travel_cards !== "Yes",
     options: [
       { value: "Marriott", label: "Marriott" },
       { value: "Hilton", label: "Hilton" },
@@ -255,7 +272,7 @@ const refinementQuestions = [
     helper: "Premium cards offer stronger benefits with higher annual fees; mid-tier cards have lower fees and solid rewards.",
     dependsOn: (answers: Answers) => {
       const { primary } = getGoalRanks(answers);
-      return primary === "Travel";
+      return primary === "Travel" && answers.exclude_travel_cards !== "Yes";
     },
     options: [
       { value: "Premium", label: "Premium" },
@@ -275,19 +292,6 @@ const refinementQuestions = [
       { value: "Yes, I plan to carry a balance", label: "Yes, I plan to carry a balance" },
       { value: "No, I pay in full", label: "No, I pay in full" },
       { value: "Doesn't matter", label: "Doesn't matter" }
-    ]
-  },
-  {
-    id: "exclude_travel_cards",
-    question: "Exclude travel cards?",
-    helper: "When bonus is your main goal, results often include travel cards. Choose to see only cashback and other non-travel cards.",
-    dependsOn: (answers: Answers) => {
-      const { primary } = getGoalRanks(answers);
-      return primary === "Bonus";
-    },
-    options: [
-      { value: "No", label: "No, include travel cards" },
-      { value: "Yes", label: "Yes, exclude all travel cards" }
     ]
   },
   {
@@ -612,12 +616,17 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
       score -= 40; // Heavy penalty so non-travel cards don't crowd results
     }
   } else if (primary === "Cashback") {
-    // Key metric: effective cashback rate; secondary: bonus-to-min-spend ratio
+    // 60% weight: cashback rate. 40% weight: bonus_to_spend_ratio (from CSV when present, else computed).
     if (isCashbackCard) {
       score += 50; // Base for being cashback
-      if (bonusRatio > 0) score += Math.min(bonusRatio * 15, 12); // Lower weight – efficient bonus (e.g. $200/$500=0.4 → +6)
+      const ratioFromCsv = parseFloat(card.bonus_to_spend_ratio || "");
+      const bonusToSpendRatio = !Number.isNaN(ratioFromCsv) && ratioFromCsv >= 0 ? ratioFromCsv : bonusRatio;
+      const cashbackComponent = Math.min(cashbackRate * 20, 100);
+      const ratioComponent = Math.min(bonusToSpendRatio * 100, 100);
+      score += 0.6 * cashbackComponent + 0.4 * ratioComponent;
+    } else {
+      score += cashbackRate * 25;
     }
-    score += cashbackRate * 25; // Effective rate is the key number
   } else if (primary === "Everyday") {
     // Mixture of cashback rate and 0% APR
     score += cashbackRate * 15; // Cashback rate matters
@@ -825,14 +834,9 @@ export default function ResultsPage() {
       }))
       .filter(x => x.score > -9999);
 
-    // When user chose Airline or Hotel (even without a specific brand), restrict to that card type
+    // When user excludes travel, pool is already non-travel only (via -9999). When including travel, show both airline and hotel cards (no filter by type).
     const travelType = answers.travel_rewards_type;
     let pool = scoredRaw;
-    if (travelType === "Airline") {
-      pool = scoredRaw.filter(x => (x.card.reward_model || "").toLowerCase() === "airline");
-    } else if (travelType === "Hotel") {
-      pool = scoredRaw.filter(x => (x.card.reward_model || "").toLowerCase() === "hotel");
-    }
 
     let finalCards: Card[] = [];
 
@@ -869,7 +873,7 @@ export default function ResultsPage() {
     } else {
       const selected = dedupeByFamily(pool)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 6);
+        .slice(0, 9);
       finalCards = selected.map(x => x.card);
     }
 
@@ -907,11 +911,7 @@ export default function ResultsPage() {
       .filter(x => x.score > -9999);
 
     const travelType = answers.travel_rewards_type;
-    if (travelType === "Airline") {
-      pool = pool.filter(x => (x.card.reward_model || "").toLowerCase() === "airline");
-    } else if (travelType === "Hotel") {
-      pool = pool.filter(x => (x.card.reward_model || "").toLowerCase() === "hotel");
-    }
+    // No filter by airline/hotel — show all travel cards when including travel.
 
     if (wantsAirlineBrand || wantsHotelBrand) {
       const brand = wantsAirlineBrand
@@ -1311,7 +1311,7 @@ export default function ResultsPage() {
                   background: "var(--surface-elevated)",
                   borderRadius: 14,
                   padding: 16,
-                  border: "1px solid var(--border)",
+                  border: "2px solid var(--card-tile-border)",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
                 }}
               >
@@ -1396,28 +1396,31 @@ export default function ResultsPage() {
                   </p>
                 )}
 
-                <div className="results-card-pros-cons">
-                  {card.pros && (
-                    <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
-                      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
-                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>
-                        {splitProsCons(card.pros).map((p, i) => (
-                          <li key={i}>{p}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {card.cons && (
-                    <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
-                      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
-                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>
-                        {splitProsCons(card.cons).map((c, i) => (
-                          <li key={i}>{c}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                {SHOW_PROSCONS_ON_RESULTS_TILES && (
+                  <div className="results-card-pros-cons">
+                    {card.pros && (
+                      <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
+                        <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
+                        <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>
+                          {splitProsCons(card.pros).map((p, i) => (
+                            <li key={i}>{p}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {card.cons && (
+                      <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
+                        <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
+                        <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>
+                          {splitProsCons(card.cons).map((c, i) => (
+                            <li key={i}>{c}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div>
                     {card.application_link && (
@@ -1492,7 +1495,7 @@ export default function ResultsPage() {
                   background: "var(--surface-elevated)",
                   borderRadius: 14,
                   padding: 16,
-                  border: "1px solid var(--border)",
+                  border: "2px solid var(--card-tile-border)",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
                 }}
               >
@@ -1572,28 +1575,30 @@ export default function ResultsPage() {
                     {card.best_for}
                   </p>
                 )}
-                <div className="results-card-pros-cons">
-                  {card.pros && (
-                    <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
-                      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
-                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>
-                        {splitProsCons(card.pros).map((p, i) => (
-                          <li key={i}>{p}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {card.cons && (
-                    <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
-                      <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
-                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>
-                        {splitProsCons(card.cons).map((c, i) => (
-                          <li key={i}>{c}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                {SHOW_PROSCONS_ON_RESULTS_TILES && (
+                  <div className="results-card-pros-cons">
+                    {card.pros && (
+                      <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
+                        <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
+                        <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>
+                          {splitProsCons(card.pros).map((p, i) => (
+                            <li key={i}>{p}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {card.cons && (
+                      <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
+                        <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
+                        <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>
+                          {splitProsCons(card.cons).map((c, i) => (
+                            <li key={i}>{c}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div>
                     {card.application_link && (
@@ -1700,7 +1705,7 @@ export default function ResultsPage() {
                     fontWeight: 600
                   }}
                 >
-                  Hide extra recommendations
+                  Show fewer options
                 </button>
               </>
             )}
@@ -1716,7 +1721,7 @@ export default function ResultsPage() {
                   fontWeight: 600
                 }}
               >
-                Hide extra recommendations
+                Show fewer options
               </button>
             )}
           </div>
@@ -1727,7 +1732,7 @@ export default function ResultsPage() {
         <hr
           style={{
             border: "none",
-            borderTop: "1px solid var(--border)",
+            borderTop: "2px solid var(--border)",
             margin: "24px 0"
           }}
         />
@@ -1805,7 +1810,7 @@ export default function ResultsPage() {
                     borderRadius: 14,
                     padding: 16,
                     marginBottom: 20,
-                    border: "1px solid var(--border)",
+                    border: "2px solid var(--card-tile-border)",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
                   }}
                 >
@@ -1834,20 +1839,22 @@ export default function ResultsPage() {
                     </div>
                     {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "var(--bonus-text)", background: "var(--bonus-bg)", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
                     {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>{card.best_for}</p>}
-                    <div className="results-card-pros-cons">
-                      {card.pros && (
-                        <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
-                          <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
-                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>{splitProsCons(card.pros).map((p, i) => <li key={i}>{p}</li>)}</ul>
-                        </div>
-                      )}
-                      {card.cons && (
-                        <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
-                          <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
-                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>{splitProsCons(card.cons).map((c, i) => <li key={i}>{c}</li>)}</ul>
-                        </div>
-                      )}
-                    </div>
+                    {SHOW_PROSCONS_ON_RESULTS_TILES && (
+                      <div className="results-card-pros-cons">
+                        {card.pros && (
+                          <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
+                            <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
+                            <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>{splitProsCons(card.pros).map((p, i) => <li key={i}>{p}</li>)}</ul>
+                          </div>
+                        )}
+                        {card.cons && (
+                          <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
+                            <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
+                            <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>{splitProsCons(card.cons).map((c, i) => <li key={i}>{c}</li>)}</ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--pill-bg)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                       <div>
                         {card.application_link && (
@@ -1937,7 +1944,7 @@ export default function ResultsPage() {
                     borderRadius: 14,
                     padding: 16,
                     marginBottom: 16,
-                    border: "1px solid var(--border)",
+                    border: "2px solid var(--card-tile-border)",
                     boxShadow: "0 2px 6px rgba(0,0,0,0.04)"
                   }}
                 >
@@ -1966,20 +1973,22 @@ export default function ResultsPage() {
                       </div>
                     {bonusDisplay && <div style={{ marginTop: 8, fontSize: 12, color: "var(--bonus-text)", background: "var(--bonus-bg)", padding: "6px 10px", borderRadius: 6, display: "inline-block" }}>{bonusDisplay}</div>}
                     {card.best_for && <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.4 }}>{card.best_for}</p>}
-                    <div className="results-card-pros-cons">
-                      {card.pros && (
-                        <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
-                          <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
-                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>{splitProsCons(card.pros).map((p, i) => <li key={i}>{p}</li>)}</ul>
-                        </div>
-                      )}
-                      {card.cons && (
-                        <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
-                          <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
-                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>{splitProsCons(card.cons).map((c, i) => <li key={i}>{c}</li>)}</ul>
-                        </div>
-                      )}
-                    </div>
+                    {SHOW_PROSCONS_ON_RESULTS_TILES && (
+                      <div className="results-card-pros-cons">
+                        {card.pros && (
+                          <div style={{ background: "var(--pros-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--pros-text)" }}>
+                            <div style={{ fontWeight: 600, fontSize: 11, color: "var(--pros-text)", marginBottom: 4 }}>Pros</div>
+                            <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--pros-list)", lineHeight: 1.5 }}>{splitProsCons(card.pros).map((p, i) => <li key={i}>{p}</li>)}</ul>
+                          </div>
+                        )}
+                        {card.cons && (
+                          <div style={{ background: "var(--cons-bg)", padding: 10, borderRadius: 8, borderLeft: "4px solid var(--cons-text)" }}>
+                            <div style={{ fontWeight: 600, fontSize: 11, color: "var(--cons-text)", marginBottom: 4 }}>Cons</div>
+                            <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--cons-list)", lineHeight: 1.5 }}>{splitProsCons(card.cons).map((c, i) => <li key={i}>{c}</li>)}</ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

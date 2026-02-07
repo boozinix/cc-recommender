@@ -12,6 +12,7 @@
   --text-muted-light: #94a3b8;
   --border: #e2e8f0;
   --border-light: #f1f5f9;
+  --card-tile-border: #94a3b8;
   --gradient-header: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
   --gradient-section: linear-gradient(180deg, #f8fafc 0%, #ffffff 120px);
   --pros-bg: #f0fdfa;
@@ -48,6 +49,7 @@
     --text-muted-light: #64748b;
     --border: #404040;
     --border-light: #333333;
+    --card-tile-border: #64748b;
     --gradient-header: linear-gradient(180deg, #1f1f1f 0%, #171717 100%);
     --gradient-section: linear-gradient(180deg, #171717 0%, #0a0a0a 120px);
     --pros-bg: #134e4a;

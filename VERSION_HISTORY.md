@@ -4,7 +4,27 @@ Track of major checkpoints and what changed in each. Git tag and commit are list
 
 ---
 
-## v0.9 — **Checkpoint before experiments** (current)
+## v0.10 — **Canon** (current)
+
+**Tag:** `v0.10`  
+**Date:** Feb 2025
+
+Canon checkpoint before further edits. Restore to this if you need to undo later changes.
+
+### What changed (since v0.9)
+- **Results list:** 3 → 6 → 9 cards. At 6 you can "Show fewer options" (back to 3) or "Show 3 more" (to 9). Button text "Hide extra recommendations" replaced with "Show fewer options".
+- **Divider:** Bolder line (2px) between main recommendations and alternate (personal/business) section.
+- **Refinement order:** "Exclude travel and hotel branded cards?" is first when Bonus is primary; title updated; when user excludes travel, airline/hotel preference questions are hidden.
+- **Travel included:** When not excluding travel, results show both airline and hotel cards. Bonus + exclude travel: fixed zero results.
+
+### How to restore this version
+```bash
+git checkout v0.10
+```
+
+---
+
+## v0.9 — **Checkpoint before experiments**
 
 **Tag:** `v0.9`  
 **Commit:** `c140768`  

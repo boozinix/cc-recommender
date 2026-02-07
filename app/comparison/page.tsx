@@ -284,14 +284,12 @@ function ComparisonPageContent() {
 
   const prosConsCell = (pros: string | undefined, cons: string | undefined, isPros: boolean) => {
     const text = isPros ? (pros || "—") : (cons || "—");
-    const items = text.split(/\s*•\s*/).map(s => s.trim()).filter(Boolean);
+    const items = text.split(/\s*[;•]\s*/).map(s => s.trim()).filter(Boolean);
     const bg = isPros ? "var(--pros-bg)" : "var(--cons-bg)";
     const borderColor = isPros ? "var(--pros-text)" : "var(--cons-text)";
     const color = isPros ? "var(--pros-list)" : "var(--cons-list)";
-    const headerColor = isPros ? "var(--pros-text)" : "var(--cons-text)";
     return (
       <div style={{ background: bg, padding: 12, borderRadius: 10, border: `1px solid ${borderColor}` }}>
-        <div style={{ fontWeight: 600, fontSize: 11, color: headerColor, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.03em" }}>{isPros ? "Pros" : "Cons"}</div>
         {items.length > 0 ? (
           <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color, lineHeight: 1.6 }}>
             {items.slice(0, 5).map((item, i) => <li key={i} style={{ marginBottom: 4 }}>{item}</li>)}
@@ -341,12 +339,12 @@ function ComparisonPageContent() {
     { key: "type", label: "Personal / Business", render: (c: Card) => (c.card_type || "").toLowerCase() === "business" ? "Business" : "Personal" },
     { key: "bank", label: "Bank", render: bankCell },
     { key: "rewards_type", label: "Rewards type", render: getRewardsTypeDisplay },
-    { key: "bank_rules", label: "Bank rules", render: (c: Card) => bankRulesCell(c.bank_rules) },
     { key: "intro_apr", label: "Intro APR", render: (c: Card) => c.intro_apr_purchase?.trim() || "None" },
     { key: "signup_bonus", label: "Sign-up bonus", render: formatSignupBonus },
     { key: "spend", label: "Spending requirements", render: formatSpendRequirement },
     { key: "pros", label: "Pros", render: (c: Card) => prosConsCell(c.pros, c.cons, true) },
     { key: "cons", label: "Cons", render: (c: Card) => prosConsCell(c.pros, c.cons, false) },
+    { key: "bank_rules", label: "Bank rules", render: (c: Card) => bankRulesCell(c.bank_rules) },
     { key: "apply", label: "Apply", render: applyCell }
   ];
 
