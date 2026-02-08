@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { STORAGE_KEY } from "../lib/friends";
 
 type Props = {
   friendName: string;
@@ -11,7 +12,7 @@ export function Watermark({ friendName }: Props) {
 
   function handleLogout() {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("cc_friend_id");
+      localStorage.removeItem(STORAGE_KEY);
       router.push("/login");
       router.refresh();
     }

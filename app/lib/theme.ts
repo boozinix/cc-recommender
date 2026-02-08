@@ -1,6 +1,6 @@
 /**
  * Single source of truth for personal vs business card mode colors.
- * Used by: wizard (app/wizard/page.tsx), results (app/results/page.tsx).
+ * Used by: wizard, results, comparison, sandbox-results.
  * To change the business card scheme later, edit BUSINESS below and it applies everywhere.
  */
 
@@ -27,12 +27,12 @@ const PERSONAL: Theme = {
 };
 
 const BUSINESS: Theme = {
-  primary: "#ec4899",
-  primaryLight: "#fce7f3",
-  primaryLighter: "#fbcfe8",
-  primaryDark: "#be185d",
-  backgroundGradient: "radial-gradient(circle at top, #fce7f3, #ffffff)",
-  businessBadge: { bg: "#fce7f3", text: "#be185d" },
+  primary: "#9d8468",
+  primaryLight: "#e8dfd4",
+  primaryLighter: "#d4c4b0",
+  primaryDark: "#5c4a3d",
+  backgroundGradient: "radial-gradient(circle at top, #e8dfd4, #ffffff)",
+  businessBadge: { bg: "#e8dfd4", text: "#5c4a3d" },
 };
 
 export function getTheme(mode: CardMode | null | undefined): Theme {

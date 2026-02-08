@@ -18,16 +18,19 @@ Wizard Q1: Rank goals (1st = primary)
     │
     ├── Primary = ✈️ Travel
     │       │
-    │       ├── What kind of travel rewards do you prefer?  [General / Airline / Hotel]
+    │       ├── What kind of travel rewards do you prefer?  [Bank Rewards / Airline / Hotel]
+    │       │       ├── If Bank Rewards → Any bank preference?  [Chase, Amex, Citi, …]
     │       │       ├── If Airline → Which airline do you usually fly?  [United, Delta, …]
     │       │       └── If Hotel  → Which hotel brand do you prefer?  [Marriott, Hilton, …]
     │       ├── Do you prefer a premium or mid-tier travel card?  [Premium / Mid-tier / No preference]
+    │       ├── Prefer cards with TSA PreCheck/GE credit or lounge access?  [multi-select: TSA PreCheck/Global Entry credit, Lounge access]
     │       └── Do any of these approval rules apply to you?  [always shown]
     │
     ├── Primary = 🎁 Signup bonus
     │       │
     │       ├── Exclude travel and hotel branded cards?  [No, include / Yes, exclude]
-    │       │       ├── If "No, include" → What kind of travel rewards?  [General / Airline / Hotel]
+    │       │       ├── If "No, include" → What kind of travel rewards?  [Bank Rewards / Airline / Hotel]
+    │       │       │       ├── If Bank Rewards → Any bank preference?  [Chase, Amex, Citi, …]
     │       │       │       ├── If Airline → Which airline do you usually fly?  [United, Delta, …]
     │       │       │       └── If Hotel  → Which hotel brand do you prefer?  [Marriott, Hilton, …]
     │       │       └── If "Yes, exclude" → no travel-type or airline/hotel questions
@@ -46,7 +49,7 @@ Wizard Q1: Rank goals (1st = primary)
 | Primary (wizard Q1 #1) | Refinement questions shown (results page) |
 |------------------------|-------------------------------------------|
 | **Cashback**           | 0% intro APR? • Approval rules            |
-| **Travel**             | Travel rewards type? → (if Airline: airline? \| if Hotel: hotel?) • Premium/mid-tier? • Approval rules |
+| **Travel**             | Travel rewards type? → (if Bank Rewards: bank? \| if Airline: airline? \| if Hotel: hotel?) • Premium/mid-tier? • TSA PreCheck/lounge? (multi-select) • Approval rules |
 | **Bonus**              | Exclude travel and hotel cards? • (if include travel) Travel rewards type? → airline? / hotel? • Approval rules |
 | **Everyday**           | 0% intro APR? • Approval rules            |
 

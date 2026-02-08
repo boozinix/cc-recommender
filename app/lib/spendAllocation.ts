@@ -54,8 +54,7 @@ function buildItems(cards: CardForAllocation[]): { weight: number; value: number
 /**
  * 0/1 knapsack with capacity (budget) and max number of items (maxCards).
  * Returns the set of item indices that maximize total value.
- * DP: dp[w][k] = max value with capacity w and at most k items.
- * We iterate over items and update; backRef[w][k] = index of last item taken to achieve (w,k).
+ * Uses separate prev/curr layers so we only read from "before adding this item" — each item at most once.
  */
 function knapsackMaxValue(
   items: { weight: number; value: number; index: number }[],
@@ -65,25 +64,40 @@ function knapsackMaxValue(
   const maxK = Math.min(maxItems, items.length);
   if (maxK <= 0 || capacity <= 0) return { totalValue: 0, chosenIndices: [] };
 
-  const dp: number[][] = [];
-  const backRef: number[][] = [];
-  for (let w = 0; w <= capacity; w++) {
-    dp[w] = Array(maxK + 1).fill(0);
-    backRef[w] = Array(maxK + 1).fill(-1);
+  function makeGrid(): number[][] {
+    const grid: number[][] = [];
+    for (let w = 0; w <= capacity; w++) grid[w] = Array(maxK + 1).fill(0);
+    return grid;
+  }
+  function makeBackGrid(): number[][] {
+    const grid: number[][] = [];
+    for (let w = 0; w <= capacity; w++) grid[w] = Array(maxK + 1).fill(-1);
+    return grid;
   }
 
+  let dp = makeGrid();
+  let backRef = makeBackGrid();
+
   for (let i = 0; i < items.length; i++) {
-    const { weight, value } = items[i];
-    for (let w = capacity; w >= weight; w--) {
-      for (let k = maxK; k >= 1; k--) {
-        const prev = dp[w - weight][k - 1];
-        const candidate = prev + value;
-        if (candidate > dp[w][k]) {
-          dp[w][k] = candidate;
-          backRef[w][k] = i;
+    const { weight, value, index: cardIndex } = items[i];
+    const nextDp = makeGrid();
+    const nextBack = makeBackGrid();
+    for (let w = 0; w <= capacity; w++) {
+      for (let k = 0; k <= maxK; k++) {
+        nextDp[w][k] = dp[w][k];
+        nextBack[w][k] = backRef[w][k];
+        if (w >= weight && k >= 1) {
+          const prevVal = dp[w - weight][k - 1];
+          const candidate = prevVal + value;
+          if (candidate > nextDp[w][k]) {
+            nextDp[w][k] = candidate;
+            nextBack[w][k] = cardIndex;
+          }
         }
       }
     }
+    dp = nextDp;
+    backRef = nextBack;
   }
 
   let bestValue = 0;
@@ -98,22 +112,44 @@ function knapsackMaxValue(
   const chosenIndices: number[] = [];
   let w = capacity;
   let k = bestK;
+  const used = new Set<number>();
   while (k > 0 && w > 0) {
-    const i = backRef[w][k];
-    if (i < 0) break;
-    const item = items[i];
-    if (!item) break;
-    chosenIndices.push(item.index);
+    const cardIndex = backRef[w][k];
+    if (cardIndex < 0) break;
+    const item = items.find((it) => it.index === cardIndex);
+    if (!item || used.has(cardIndex)) break;
+    used.add(cardIndex);
+    chosenIndices.push(cardIndex);
     w -= item.weight;
     k -= 1;
   }
 
-  return { totalValue: bestValue, chosenIndices };
+  const capped = chosenIndices.slice(0, maxItems);
+  const cappedValue = capped.reduce((sum, idx) => sum + (items.find((it) => it.index === idx)?.value ?? 0), 0);
+  return { totalValue: cappedValue, chosenIndices: capped };
+}
+
+/**
+ * Deduplicate cards by card_name so each card can be selected at most once.
+ * Keeps the row with highest estimated_bonus_value_usd per name (then first occurrence).
+ */
+function dedupeCardsByName(cards: CardForAllocation[]): CardForAllocation[] {
+  const byName = new Map<string, CardForAllocation>();
+  for (const card of cards) {
+    const name = (card.card_name || "").trim();
+    if (!name) continue;
+    const existing = byName.get(name);
+    const bonus = parseBonus(card.estimated_bonus_value_usd);
+    const existingBonus = existing ? parseBonus(existing.estimated_bonus_value_usd) : 0;
+    if (!existing || bonus > existingBonus) byName.set(name, card);
+  }
+  return Array.from(byName.values());
 }
 
 /**
  * Compute optimal plan: which cards to apply for to maximize total bonus
  * given a spend budget and max number of cards.
+ * Each card (by card_name) is considered at most once.
  */
 export function computeOptimalPlan(
   cards: CardForAllocation[],
@@ -123,15 +159,20 @@ export function computeOptimalPlan(
   const capacity = Math.floor(Math.max(0, budgetDollars));
   const maxItems = Math.max(1, Math.min(maxCards, 20));
 
-  const items = buildItems(cards);
+  const deduped = dedupeCardsByName(cards);
+  const items = buildItems(deduped);
   const { totalValue, chosenIndices } = knapsackMaxValue(items, capacity, maxItems);
 
   const chosenCards: CardForAllocation[] = [];
   const allocation: AllocationItem[] = [];
   let totalSpendUsed = 0;
+  const seenCardName = new Set<string>();
 
   chosenIndices.forEach((index) => {
-    const card = cards[index];
+    const card = deduped[index];
+    const name = (card.card_name || "").trim();
+    if (seenCardName.has(name)) return; // never show the same card twice
+    seenCardName.add(name);
     const minSpend = parseMinSpend(card.minimum_spend_amount);
     const bonus = parseBonus(card.estimated_bonus_value_usd);
     chosenCards.push(card);
@@ -139,9 +180,11 @@ export function computeOptimalPlan(
     totalSpendUsed += minSpend;
   });
 
+  const actualBonus = allocation.reduce((sum, a) => sum + a.bonus, 0);
+
   return {
     chosenCards,
-    totalBonus: totalValue,
+    totalBonus: actualBonus,
     allocation,
     totalSpendUsed
   };

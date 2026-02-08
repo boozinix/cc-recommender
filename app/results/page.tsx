@@ -7,6 +7,7 @@
 // =========================================================
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Papa from "papaparse";
 import { getTheme, type CardMode } from "@/app/lib/theme";
 import { FeedbackButton } from "@/app/components/FeedbackButton";
@@ -48,6 +49,8 @@ type Card = {
   application_link?: string;
   special_feature_1?: string;
   special_feature_2?: string;
+  lounge?: string;
+  ge_tsa_precheck?: string;
 };
 
 
@@ -235,9 +238,29 @@ const refinementQuestions = [
       return (primary === "Travel" || primary === "Bonus") && answers.exclude_travel_cards !== "Yes";
     },
     options: [
-      { value: "General", label: "General" },
+      { value: "General", label: "Bank Rewards" },
       { value: "Airline", label: "Airline" },
       { value: "Hotel", label: "Hotel" }
+    ]
+  },
+  {
+    id: "preferred_bank",
+    question: "Any bank preference?",
+    helper: "We'll prioritize cards from the bank you pick (Bank Rewards = flexible points like Chase UR, Amex MR, Citi TYP).",
+    dependsOn: (answers: Answers) => {
+      const { primary } = getGoalRanks(answers);
+      return (primary === "Travel" || primary === "Bonus") && answers.travel_rewards_type === "General" && answers.exclude_travel_cards !== "Yes";
+    },
+    options: [
+      { value: "Chase", label: "Chase" },
+      { value: "Amex", label: "Amex" },
+      { value: "Citi", label: "Citi" },
+      { value: "Capital One", label: "Capital One" },
+      { value: "Bank of America", label: "Bank of America" },
+      { value: "U.S. Bank", label: "U.S. Bank" },
+      { value: "Barclays", label: "Barclays" },
+      { value: "Wells Fargo", label: "Wells Fargo" },
+      { value: "No preference", label: "No preference" }
     ]
   },
   {
@@ -293,6 +316,20 @@ const refinementQuestions = [
     ]
   },
   {
+    id: "travel_perks",
+    question: "Prefer cards with TSA PreCheck/Global Entry credit or lounge access?",
+    helper: "Select one or both. We'll prioritize cards that include these benefits.",
+    dependsOn: (answers: Answers) => {
+      const { primary } = getGoalRanks(answers);
+      return primary === "Travel" && answers.exclude_travel_cards !== "Yes";
+    },
+    multiSelect: true,
+    options: [
+      { value: "tsa_ge", label: "TSA PreCheck / Global Entry credit" },
+      { value: "lounge", label: "Lounge access" }
+    ]
+  },
+  {
     id: "needs_0_apr",
     question: "Do you need a 0% intro APR?",
     helper: "We’ll prioritize cards with 0% intro APR when this matters to you.",
@@ -312,10 +349,10 @@ const refinementQuestions = [
     dependsOn: () => true,
     multiSelect: true,
     options: [
-      { value: "5_in_24mo", label: "5+ cards in 24 months (exclude Chase)" },
-      { value: "6_in_24mo", label: "6+ cards in 24 months (exclude Chase & Barclays)" },
-      { value: "2_in_60_days", label: "2+ cards in 60 days (exclude Citi & Amex)" },
-      { value: "2_in_90_days", label: "2+ cards in 90 days (exclude Amex)" }
+      { value: "5_in_24mo", label: "5+ cards in 24 months (excludes Chase)" },
+      { value: "6_in_24mo", label: "6+ cards in 24 months (excludes Chase & Barclays)" },
+      { value: "2_in_60_days", label: "2+ cards in 60 days (excludes Citi & Amex)" },
+      { value: "2_in_90_days", label: "2+ cards in 90 days (excludes Amex)" }
     ]
   }
 ];
@@ -440,6 +477,17 @@ function cardMatchesBrandKey(card: Card, brandKey: string): boolean {
   const name = (card.card_name || "").toLowerCase();
   if (family.includes(brandKey) || name.includes(brandKey)) return true;
   if (brandKey === "expedia" && (name.includes("one key") || name.includes("hotels.com") || name.includes("vrbo"))) return true;
+  return false;
+}
+
+/** Match card to preferred bank (issuer). Normalizes Amex / American Express. */
+function cardMatchesBank(card: Card, bank: string): boolean {
+  if (!bank || bank === "No preference") return false;
+  const issuer = (card.issuer || "").trim().toLowerCase();
+  const key = bank.trim().toLowerCase();
+  if (issuer === key) return true;
+  if (key === "amex" && (issuer === "amex" || issuer === "american express")) return true;
+  if (key === "american express" && (issuer === "amex" || issuer === "american express")) return true;
   return false;
 }
 
@@ -721,6 +769,16 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
       score += 30; // So Chase Sapphire, Capital One Venture, Amex MR cards show up
     }
 
+    // Bank preference when user chose Bank Rewards (General)
+    const preferredBank = answers.preferred_bank;
+    if (wantsGenericTravel && preferredBank && preferredBank !== "No preference") {
+      const cardIssuer = (card.issuer || "").trim().toLowerCase();
+      const bankKey = preferredBank.trim().toLowerCase();
+      if (cardIssuer === bankKey || (bankKey === "amex" && cardIssuer === "american express")) {
+        score += 40;
+      }
+    }
+
     // Travel tier: Premium vs Mid-tier (use both named cards and fee so airline/hotel co-brands are covered)
     const tierPref = answers.travel_tier_preference;
     if (tierPref === "Premium") {
@@ -740,6 +798,13 @@ function scoreCard(card: Card, answers: Answers, ownedCards: string[]) {
     if (cardMatchesHotel(card, answers.preferred_hotel)) {
       score += 40;
     }
+
+    // TSA/GE and lounge: boost cards that have the selected perks
+    const travelPerks: string[] = Array.isArray(answers.travel_perks) ? answers.travel_perks : [];
+    const hasLounge = (card.lounge || "").trim().length > 0;
+    const hasTsaGe = (card.ge_tsa_precheck || "").trim().length > 0;
+    if (travelPerks.includes("tsa_ge") && hasTsaGe) score += 25;
+    if (travelPerks.includes("lounge") && hasLounge) score += 25;
   }
 
   // =========================================================
@@ -873,6 +938,11 @@ export default function ResultsPage() {
       answers.preferred_hotel &&
       answers.preferred_hotel !== "No strong preference";
 
+    const wantsBankBrand =
+      travelType === "General" &&
+      answers.preferred_bank &&
+      answers.preferred_bank !== "No preference";
+
     if (wantsAirlineBrand || wantsHotelBrand) {
       const brand = wantsAirlineBrand
         ? answers.preferred_airline
@@ -892,6 +962,23 @@ export default function ResultsPage() {
       finalCards = [
         ...brandCards.map(x => x.card),
         ...generalCards.map(x => x.card)
+      ];
+    } else if (wantsBankBrand) {
+      const bank = answers.preferred_bank!.trim();
+
+      const bankCards = pool
+        .filter(x => cardMatchesBank(x.card, bank))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 2);
+
+      const nonBankCards = pool.filter(x => !cardMatchesBank(x.card, bank));
+      const restCards = dedupeByFamily(nonBankCards)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 4);
+
+      finalCards = [
+        ...bankCards.map(x => x.card),
+        ...restCards.map(x => x.card)
       ];
     } else {
       const selected = dedupeByFamily(pool)
@@ -918,6 +1005,10 @@ export default function ResultsPage() {
     answers.travel_rewards_type === "Hotel" &&
     answers.preferred_hotel &&
     answers.preferred_hotel !== "No strong preference";
+  const wantsBankBrand =
+    answers.travel_rewards_type === "General" &&
+    answers.preferred_bank &&
+    answers.preferred_bank !== "No preference";
 
   const otherTypeCards = useMemo(() => {
     if (!answers.card_mode) return [];
@@ -958,13 +1049,32 @@ export default function ResultsPage() {
       ].slice(0, 3);
     }
 
+    if (wantsBankBrand) {
+      const bank = answers.preferred_bank!.trim();
+
+      const bankCards = pool
+        .filter(x => cardMatchesBank(x.card, bank))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 2);
+
+      const nonBankCards = pool.filter(x => !cardMatchesBank(x.card, bank));
+      const restCards = dedupeByFamily(nonBankCards)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 1);
+
+      return [
+        ...bankCards.map(x => x.card),
+        ...restCards.map(x => x.card)
+      ].slice(0, 3);
+    }
+
     const deduped = dedupeByFamily(pool)
       .sort((a, b) => b.score - a.score)
       .slice(0, 3)
       .map(x => x.card);
 
     return deduped;
-  }, [cards, answers, ownedCards, wantsAirlineBrand, wantsHotelBrand]);
+  }, [cards, answers, ownedCards, wantsAirlineBrand, wantsHotelBrand, wantsBankBrand]);
 
   // Other-type section: enter/leave animation when toggling Show/Hide business or personal cards
   useEffect(() => {
@@ -984,19 +1094,6 @@ export default function ResultsPage() {
       return () => clearTimeout(t);
     }
   }, [showOtherType, otherTypeCards]);
-
-  // ---------------------
-  // Issuer Warnings
-  // ---------------------
-  const issuerWarnings = useMemo(() => {
-    const rules: string[] = Array.isArray(answers.issuer_approval_rules) ? answers.issuer_approval_rules : [];
-    const w: string[] = [];
-    if (rules.includes("5_in_24mo")) w.push("Chase cards may not be available (5+ cards in 24 months).");
-    if (rules.includes("6_in_24mo")) w.push("Chase and Barclays cards may not be available (6+ cards in 24 months).");
-    if (rules.includes("2_in_60_days")) w.push("Citi and Amex cards may not be available (2+ cards in 60 days).");
-    if (rules.includes("2_in_90_days")) w.push("Amex cards may not be available (2+ cards in 90 days).");
-    return w;
-  }, [answers.issuer_approval_rules]);
 
 
 
@@ -1167,24 +1264,6 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {issuerWarnings.length > 0 && (
-          <div
-            style={{
-              background: "#fff7ed",
-              border: "1px solid #fdba74",
-              padding: 12,
-              borderRadius: 8,
-              marginBottom: 20
-            }}
-          >
-            {issuerWarnings.map(w => (
-              <div key={w} style={{ fontSize: 14 }}>
-                {w}
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* ========== REVERSIBLE: Refine box (same style as Your answers, card per question) ========== */}
         <div
           className="results-refine-box"
@@ -1313,6 +1392,28 @@ export default function ResultsPage() {
                 </div>
               </div>
             ))}
+            <div style={{ paddingTop: 4 }}>
+              <Link
+                href="/max-rewards-mode"
+                className="tap-target"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "8px 14px",
+                  borderRadius: 8,
+                  border: `1px solid ${theme.primaryLighter}`,
+                  background: "var(--surface-elevated)",
+                  color: theme.primaryDark,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  cursor: "pointer"
+                }}
+              >
+                <span aria-hidden style={{ opacity: 0.9 }}>Max Rewards Mode?</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

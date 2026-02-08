@@ -7,9 +7,11 @@
 
 "use client";
 
+import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import { promptToAnswers } from "./lib/promptToAnswers";
 import { STORAGE_KEY } from "./lib/friends";
+import { getTheme } from "./lib/theme";
 
 const FORMSPREE_ENDPOINT = process.env.NEXT_PUBLIC_FORMSPREE_ID
   ? `https://formspree.io/f/${process.env.NEXT_PUBLIC_FORMSPREE_ID}`
@@ -89,6 +91,8 @@ export default function Home() {
     }
   }
 
+  const theme = getTheme("personal");
+
   function handlePromptSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -115,12 +119,18 @@ export default function Home() {
         justifyContent: "center",
         alignItems: "center",
         fontFamily: "system-ui",
-        padding: 24
+        padding: 24,
+        background: theme.backgroundGradient
       }}
     >
-      <h1 style={{ fontSize: 36, marginBottom: 16 }}>
-        What Credit Card Should I Get?
-      </h1>
+      <Image
+        src="/card-scout-logo.png"
+        alt="Card Scout"
+        width={286}
+        height={156}
+        priority
+        style={{ marginBottom: 20, objectFit: "contain" }}
+      />
 
       <p style={{ marginBottom: 24, color: "var(--text-muted)", textAlign: "center", maxWidth: 420 }}>
         Get recommendations by answering a few questions, or describe what you want in your own words.
@@ -150,7 +160,7 @@ export default function Home() {
               paddingRight: 48,
               fontSize: 16,
               borderRadius: 10,
-              border: error ? "2px solid #dc2626" : "2px solid var(--input-border)",
+              border: error ? "2px solid #dc2626" : `2px solid ${theme.primaryLighter}`,
               background: "var(--input-bg)",
               boxSizing: "border-box"
             }}
@@ -172,8 +182,8 @@ export default function Home() {
                 height: 36,
                 borderRadius: "50%",
                 border: "none",
-                background: isListening ? "#dc2626" : "var(--pill-bg)",
-                color: isListening ? "#fff" : "var(--pill-text)",
+                background: isListening ? "#dc2626" : theme.primaryLight,
+                color: isListening ? "#fff" : theme.primary,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
@@ -201,7 +211,7 @@ export default function Home() {
           style={{
             padding: "12px 24px",
             borderRadius: 10,
-            background: prompt.trim() ? "#2563eb" : "#94a3b8",
+            background: prompt.trim() ? theme.primary : theme.primaryLighter,
             color: "white",
             border: "none",
             fontSize: 16,
@@ -224,11 +234,11 @@ export default function Home() {
           padding: "14px 28px",
           borderRadius: 10,
           background: "transparent",
-          color: "#2563eb",
+          color: theme.primary,
           textDecoration: "none",
           fontSize: 18,
           fontWeight: "bold",
-          border: "2px solid #2563eb"
+          border: `2px solid ${theme.primary}`
         }}
       >
         Answer questions instead →
