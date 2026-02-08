@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { redis, KV_KEY_USER_COUNT } from "@/app/lib/redis";
 
-const MAX_USERS = 100;
+const MAX_USERS = 500;
 
 export async function GET() {
   if (!redis) {
