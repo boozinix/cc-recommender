@@ -17,12 +17,13 @@ export type Theme = {
   businessBadge: { bg: string; text: string };
 };
 
+/** Logo/background: #F6F8FE. Primary: middle blue between #2563eb (original) and #0A1249 (logo dark) */
 const PERSONAL: Theme = {
-  primary: "#2563eb",
-  primaryLight: "#eef2ff",
-  primaryLighter: "#c7d2fe",
-  primaryDark: "#1e3a8a",
-  backgroundGradient: "radial-gradient(circle at top, #eef2ff, #ffffff)",
+  primary: "#1E40AF",
+  primaryLight: "#dbeafe",
+  primaryLighter: "#eff6ff",
+  primaryDark: "#1E3A8A",
+  backgroundGradient: "#F6F8FE",
   businessBadge: { bg: "#fce7f3", text: "#be185d" },
 };
 
@@ -31,7 +32,7 @@ const BUSINESS: Theme = {
   primaryLight: "#e8dfd4",
   primaryLighter: "#d4c4b0",
   primaryDark: "#5c4a3d",
-  backgroundGradient: "radial-gradient(circle at top, #e8dfd4, #ffffff)",
+  backgroundGradient: "#F6F8FE",
   businessBadge: { bg: "#e8dfd4", text: "#5c4a3d" },
 };
 

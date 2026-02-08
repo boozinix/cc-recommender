@@ -314,7 +314,7 @@ export default function Wizard() {
         alignItems: "center",
         padding: "0 20px",
         fontFamily: "system-ui",
-        background: `radial-gradient(circle at top, ${theme.primaryLight}, var(--background))`
+        background: theme.backgroundGradient
       }}
     >
       <style>{fadeInStyle}</style>

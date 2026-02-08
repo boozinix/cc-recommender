@@ -129,11 +129,12 @@ export default function Home() {
         width={286}
         height={156}
         priority
-        style={{ marginBottom: 20, objectFit: "contain" }}
+        unoptimized
+        style={{ marginBottom: 20, objectFit: "contain", background: "transparent" }}
       />
 
       <p style={{ marginBottom: 24, color: "var(--text-muted)", textAlign: "center", maxWidth: 420 }}>
-        Get recommendations by answering a few questions, or describe what you want in your own words.
+        One stop shop to find your next credit card. Answer a few questions or describe what you want.
       </p>
 
       {/* Chat-style prompt */}

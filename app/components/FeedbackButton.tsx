@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { STORAGE_KEY } from "../lib/friends";
+import { getTheme } from "../lib/theme";
 
 const FORMSPREE_ENDPOINT = process.env.NEXT_PUBLIC_FORMSPREE_ID
   ? `https://formspree.io/f/${process.env.NEXT_PUBLIC_FORMSPREE_ID}`
@@ -27,7 +28,7 @@ export function FeedbackButton() {
         body: JSON.stringify({
           feedback: feedback.trim(),
           friend_identifier: friendName,
-          _subject: `CC Recommender Feedback from ${friendName}`,
+          _subject: `Card Scout Feedback from ${friendName}`,
         }),
       });
       if (res.ok) {
@@ -56,11 +57,11 @@ export function FeedbackButton() {
           width: 52,
           height: 52,
           borderRadius: "50%",
-          background: "#2563eb",
+          background: getTheme("personal").primary,
           color: "white",
           border: "none",
           cursor: "pointer",
-          boxShadow: "0 4px 14px rgba(37, 99, 235, 0.4)",
+          boxShadow: "0 4px 14px rgba(30, 64, 175, 0.4)",
           zIndex: 9997,
           display: "flex",
           alignItems: "center",
@@ -150,7 +151,7 @@ export function FeedbackButton() {
                   style={{
                     padding: "10px 20px",
                     borderRadius: 8,
-                    background: "#2563eb",
+                    background: getTheme("personal").primary,
                     color: "white",
                     border: "none",
                     fontWeight: 600,
@@ -186,7 +187,7 @@ export function FeedbackButton() {
                     style={{
                       padding: "10px 20px",
                       borderRadius: 8,
-                      background: feedback.trim() && status !== "sending" ? "#2563eb" : "#94a3b8",
+                      background: feedback.trim() && status !== "sending" ? getTheme("personal").primary : "#94a3b8",
                       color: "white",
                       border: "none",
                       fontWeight: 600,

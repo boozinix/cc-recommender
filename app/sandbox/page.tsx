@@ -28,10 +28,10 @@ export default function SandboxPage() {
         Try ideas here. Changes on this page don’t affect the main app.
       </p>
       <p style={{ fontSize: 14 }}>
-        <a href="/sandbox/sandbox-results" style={{ color: "#2563eb", textDecoration: "underline", marginRight: 16 }}>
+        <a href="/sandbox/sandbox-results" style={{ color: "#1E40AF", textDecoration: "underline", marginRight: 16 }}>
           Sandbox results (copy of /results) →
         </a>
-        <a href="/" style={{ color: "#2563eb", textDecoration: "underline" }}>
+        <a href="/" style={{ color: "#1E40AF", textDecoration: "underline" }}>
           ← Back to app
         </a>
       </p>

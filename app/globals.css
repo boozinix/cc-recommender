@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #F6F8FE;
   --foreground: #171717;
-  --surface: #f8fafc;
+  --surface: #F6F8FE;
   --surface-elevated: #ffffff;
-  --surface-subtle: #f1f5f9;
+  --surface-subtle: #eef1fa;
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
@@ -13,8 +13,8 @@
   --border: #e2e8f0;
   --border-light: #f1f5f9;
   --card-tile-border: #94a3b8;
-  --gradient-header: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-  --gradient-section: linear-gradient(180deg, #f8fafc 0%, #ffffff 120px);
+  --gradient-header: linear-gradient(180deg, #F6F8FE 0%, #eef1fa 100%);
+  --gradient-section: linear-gradient(180deg, #F6F8FE 0%, #ffffff 120px);
   --pros-bg: #f0fdfa;
   --pros-text: #0f766e;
   --pros-list: #134e4a;
