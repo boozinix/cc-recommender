@@ -7,6 +7,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getTheme } from "@/app/lib/theme";
+import { FAQButton } from "@/app/components/FAQButton";
 
 
 
@@ -686,6 +687,7 @@ export default function Wizard() {
           </div>
         </div>
       )}
+      <FAQButton />
     </div>
   );
 }

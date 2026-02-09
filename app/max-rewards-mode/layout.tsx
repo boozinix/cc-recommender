@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Max Rewards Mode",
+  title: "Maximize Spend Mode",
   description: "Maximize signup bonuses with your spend budget and card limit.",
 };
 

@@ -38,26 +38,36 @@ export interface OptimalPlan {
   totalSpendUsed: number;
 }
 
+const MAX_CARDS_PER_BANK = 2;
+
+/**
+ * Normalize issuer/bank for grouping (e.g. "Chase" -> "chase").
+ */
+function getBank(card: CardForAllocation): string {
+  const raw = card.issuer ?? card.bank ?? "";
+  return String(raw).trim().toLowerCase();
+}
+
 /**
  * Build list of items eligible for knapsack: has positive min spend and bonus.
+ * Includes bank so we can enforce max 2 cards per bank.
  */
-function buildItems(cards: CardForAllocation[]): { weight: number; value: number; index: number }[] {
-  const items: { weight: number; value: number; index: number }[] = [];
+function buildItems(cards: CardForAllocation[]): { weight: number; value: number; index: number; bank: string }[] {
+  const items: { weight: number; value: number; index: number; bank: string }[] = [];
   cards.forEach((card, index) => {
     const weight = parseMinSpend(card.minimum_spend_amount);
     const value = parseBonus(card.estimated_bonus_value_usd);
-    if (weight > 0 && value > 0) items.push({ weight, value, index });
+    if (weight > 0 && value > 0) items.push({ weight, value, index, bank: getBank(card) });
   });
   return items;
 }
 
 /**
- * 0/1 knapsack with capacity (budget) and max number of items (maxCards).
+ * 0/1 knapsack with capacity (budget), max number of items (maxCards), and max 2 cards per bank.
  * Returns the set of item indices that maximize total value.
- * Uses separate prev/curr layers so we only read from "before adding this item" — each item at most once.
  */
 function knapsackMaxValue(
-  items: { weight: number; value: number; index: number }[],
+  items: { weight: number; value: number; index: number; bank: string }[],
   capacity: number,
   maxItems: number
 ): { totalValue: number; chosenIndices: number[] } {
@@ -69,64 +79,53 @@ function knapsackMaxValue(
     for (let w = 0; w <= capacity; w++) grid[w] = Array(maxK + 1).fill(0);
     return grid;
   }
-  function makeBackGrid(): number[][] {
-    const grid: number[][] = [];
-    for (let w = 0; w <= capacity; w++) grid[w] = Array(maxK + 1).fill(-1);
+  function makePathGrid(): number[][][] {
+    const grid: number[][][] = [];
+    for (let w = 0; w <= capacity; w++) {
+      grid[w] = [];
+      for (let k = 0; k <= maxK; k++) grid[w][k] = [];
+    }
     return grid;
   }
 
+  /** Count how many items in path indices are from the same bank as the given item. */
+  function countSameBankInPath(pathIndices: number[], itemBank: string): number {
+    return pathIndices.filter((idx) => {
+      const it = items.find((x) => x.index === idx);
+      return it?.bank === itemBank;
+    }).length;
+  }
+
   let dp = makeGrid();
-  let backRef = makeBackGrid();
+  let path = makePathGrid();
 
   for (let i = 0; i < items.length; i++) {
-    const { weight, value, index: cardIndex } = items[i];
+    const { weight, value, index: cardIndex, bank } = items[i];
     const nextDp = makeGrid();
-    const nextBack = makeBackGrid();
+    const nextPath = makePathGrid();
     for (let w = 0; w <= capacity; w++) {
       for (let k = 0; k <= maxK; k++) {
         nextDp[w][k] = dp[w][k];
-        nextBack[w][k] = backRef[w][k];
+        nextPath[w][k] = path[w][k].slice();
         if (w >= weight && k >= 1) {
+          const prevPath = path[w - weight][k - 1];
+          if (countSameBankInPath(prevPath, bank) >= MAX_CARDS_PER_BANK) continue;
           const prevVal = dp[w - weight][k - 1];
           const candidate = prevVal + value;
           if (candidate > nextDp[w][k]) {
             nextDp[w][k] = candidate;
-            nextBack[w][k] = cardIndex;
+            nextPath[w][k] = [...prevPath, cardIndex];
           }
         }
       }
     }
     dp = nextDp;
-    backRef = nextBack;
+    path = nextPath;
   }
 
-  let bestValue = 0;
-  let bestK = 0;
-  for (let k = 1; k <= maxK; k++) {
-    if (dp[capacity][k] > bestValue) {
-      bestValue = dp[capacity][k];
-      bestK = k;
-    }
-  }
-
-  const chosenIndices: number[] = [];
-  let w = capacity;
-  let k = bestK;
-  const used = new Set<number>();
-  while (k > 0 && w > 0) {
-    const cardIndex = backRef[w][k];
-    if (cardIndex < 0) break;
-    const item = items.find((it) => it.index === cardIndex);
-    if (!item || used.has(cardIndex)) break;
-    used.add(cardIndex);
-    chosenIndices.push(cardIndex);
-    w -= item.weight;
-    k -= 1;
-  }
-
-  const capped = chosenIndices.slice(0, maxItems);
-  const cappedValue = capped.reduce((sum, idx) => sum + (items.find((it) => it.index === idx)?.value ?? 0), 0);
-  return { totalValue: cappedValue, chosenIndices: capped };
+  const chosenIndices = path[capacity][maxK].slice(0, maxItems);
+  const totalValue = chosenIndices.reduce((sum, idx) => sum + (items.find((it) => it.index === idx)?.value ?? 0), 0);
+  return { totalValue, chosenIndices };
 }
 
 /**

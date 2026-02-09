@@ -1,7 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useEffect } from "react";
+import { CardScoutLogo } from "../components/CardScoutLogo";
+import { FAQButton } from "../components/FAQButton";
 import { useRouter } from "next/navigation";
 import { STORAGE_KEY } from "../lib/friends";
 import { getTheme } from "../lib/theme";
@@ -67,14 +68,11 @@ export default function LoginPage() {
       }}
     >
       <div style={{ marginBottom: 24 }}>
-        <Image
-          src="/card-scout-logo.png"
-          alt="Card Scout"
-          width={220}
-          height={120}
-          priority
-          unoptimized
-          style={{ objectFit: "contain" }}
+        <CardScoutLogo
+          width={286}
+          height={156}
+          mode="personal"
+          style={{ flexShrink: 0 }}
         />
       </div>
       <p style={{ color: "#64748b", marginBottom: 32, fontSize: 15, textAlign: "center" }}>
@@ -148,6 +146,8 @@ export default function LoginPage() {
           Something went wrong. Please refresh the page.
         </p>
       )}
+
+      <FAQButton />
     </div>
   );
 }

@@ -13,8 +13,10 @@
 // =========================================================
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Papa from "papaparse";
 import { getTheme, type CardMode } from "@/app/lib/theme";
+import { getEstimatedBonusValueUsd } from "@/app/lib/pointValues";
 import { FeedbackButton } from "@/app/components/FeedbackButton";
 import { CardDetailsContent, type CardDetailData, type CardDetailTheme } from "@/app/components/card-detail/CardDetailsContent";
 
@@ -240,7 +242,8 @@ const refinementQuestions = [
     options: [
       { value: "General", label: "Bank Rewards" },
       { value: "Airline", label: "Airline" },
-      { value: "Hotel", label: "Hotel" }
+      { value: "Hotel", label: "Hotel" },
+      { value: "No Preference", label: "No Preference" }
     ]
   },
   {
@@ -442,12 +445,20 @@ function getRewardModelLabel(rewardModel: string): string {
   return rewardModel ? rewardModel.charAt(0).toUpperCase() + rewardModel.slice(1) : "";
 }
 
-/** Cashback rate for display: prefer display string (e.g. "5/3/1"), else effective as % */
+/** Cashback rate for display: always show as % style (e.g. "5% / 3% / 1.5%" or "1.5%") */
 function getCashbackDisplay(card: Card): string | null {
   const display = card.cashback_rate_display?.trim();
-  if (display) return display;
+  if (display) {
+    const parts = display.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean);
+    if (parts.length === 0) return null;
+    const withPercent = parts.map(p => {
+      const n = parseFloat(p);
+      return Number.isNaN(n) ? p : `${n}%`;
+    });
+    return withPercent.join(" / ");
+  }
   const effective = card.cashback_rate_effective?.trim();
-  if (effective && parseFloat(effective) > 0) return `${effective}%`;
+  if (effective && parseFloat(effective) >= 0) return `${effective}%`;
   return null;
 }
 
@@ -853,6 +864,7 @@ export default function ResultsPage() {
   const [showMoreMain, setShowMoreMain] = useState<3 | 6 | 9>(3);
   const [hoveredAnswerIndex, setHoveredAnswerIndex] = useState<number | null>(null);
   const [refinementOpen, setRefinementOpen] = useState(false);
+  const [advancedModeOpen, setAdvancedModeOpen] = useState(false);
 
   // Enter/leave animation when refinement changes the result set (optional)
   const previousVisibleRef = useRef<Card[]>([]);
@@ -901,7 +913,10 @@ export default function ResultsPage() {
         const bankRulesMap: Record<string, string> = {};
         bankRows.forEach(b => { if (b.issuer) bankRulesMap[b.issuer] = b.bank_rules || ""; });
         const parsed = Papa.parse<Card>(cardsText, { header: true, skipEmptyLines: true });
-        const enriched = parsed.data.map(c => ({ ...c, bank_rules: bankRulesMap[c.issuer] ?? c.bank_rules ?? "" }));
+        const enriched = parsed.data.map(c => {
+          const base = { ...c, bank_rules: bankRulesMap[c.issuer] ?? c.bank_rules ?? "" };
+          return { ...base, estimated_bonus_value_usd: String(getEstimatedBonusValueUsd(base)) };
+        });
         setCards(enriched);
       });
   }, []);
@@ -1393,6 +1408,87 @@ export default function ResultsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* ========== Advanced Mode (left panel, same style as Refine) ========== */}
+        <div
+          className="results-advanced-mode-box"
+          style={{
+            marginBottom: 24,
+            border: "1px solid var(--border)",
+            borderRadius: 12,
+            overflow: "hidden",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              fontSize: 14,
+              fontWeight: 700,
+              color: "var(--text-secondary)",
+              padding: "12px 14px",
+              background: "var(--gradient-header)",
+              borderBottom: advancedModeOpen ? "1px solid var(--border)" : "none"
+            }}
+          >
+            <span>Advanced Mode</span>
+            <button
+              type="button"
+              className="refinement-mobile-toggle tap-target"
+              onClick={() => setAdvancedModeOpen((prev) => !prev)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+                background: "var(--surface-elevated)",
+                color: "var(--text-secondary)",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              {advancedModeOpen ? "Hide" : "Show"}
+            </button>
+          </div>
+          <div className={`advanced-mode-content ${advancedModeOpen ? "" : "refinement-content-collapsed"}`} style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 14 }}>
+            <div
+              style={{
+                background: "var(--surface-elevated)",
+                border: "1px solid var(--border)",
+                borderRadius: 10,
+                padding: "14px 16px",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.04)"
+              }}
+            >
+              <div style={{ fontWeight: 600, color: theme.primaryDark, fontSize: 14, marginBottom: 8 }}>
+                Do you want to maximize rewards for a specific spend?
+              </div>
+              <Link
+                href="/max-rewards-mode"
+                className="tap-target"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "10px 16px",
+                  borderRadius: 8,
+                  border: `2px solid ${theme.primary}`,
+                  background: theme.primaryLight,
+                  color: theme.primaryDark,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  cursor: "pointer"
+                }}
+              >
+                Maximize rewards mode →
+              </Link>
+            </div>
           </div>
         </div>
       </div>

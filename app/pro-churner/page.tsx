@@ -5,6 +5,7 @@ import Link from "next/link";
 import Papa from "papaparse";
 import { computeOptimalPlan, type CardForAllocation } from "@/app/lib/spendAllocation";
 import { getTheme } from "@/app/lib/theme";
+import { getEstimatedBonusValueUsd } from "@/app/lib/pointValues";
 
 type Card = CardForAllocation & {
   issuer: string;
@@ -87,7 +88,11 @@ export default function ProChurnerPage() {
       .then((r) => r.text())
       .then((cardsText) => {
         const parsed = Papa.parse<Card>(cardsText, { header: true, skipEmptyLines: true });
-        setCards(parsed.data);
+        const enriched = parsed.data.map((c: Card) => ({
+          ...c,
+          estimated_bonus_value_usd: String(getEstimatedBonusValueUsd(c))
+        }));
+        setCards(enriched);
       })
       .catch(() => setCards([]));
   }, []);

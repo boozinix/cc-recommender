@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import Papa from "papaparse";
 import Link from "next/link";
 import { getTheme, type CardMode } from "@/app/lib/theme";
+import { getEstimatedBonusValueUsd } from "@/app/lib/pointValues";
 
 // =========================================================
 // Types
@@ -185,7 +186,10 @@ function ComparisonPageContent() {
         const bankRulesMap: Record<string, string> = {};
         bankRows.forEach((b) => { if (b.issuer) bankRulesMap[b.issuer] = b.bank_rules || ""; });
         const parsed = Papa.parse<Card>(cardsText, { header: true, skipEmptyLines: true });
-        const enriched = parsed.data.map((c) => ({ ...c, bank_rules: bankRulesMap[c.issuer] ?? c.bank_rules ?? "" }));
+        const enriched = parsed.data.map((c) => {
+          const base = { ...c, bank_rules: bankRulesMap[c.issuer] ?? c.bank_rules ?? "" };
+          return { ...base, estimated_bonus_value_usd: String(getEstimatedBonusValueUsd(base)) };
+        });
         setAllCards(enriched);
       })
       .catch(() => setError("Could not load cards."))

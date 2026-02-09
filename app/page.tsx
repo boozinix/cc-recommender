@@ -7,8 +7,9 @@
 
 "use client";
 
-import Image from "next/image";
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
+import { CardScoutLogo } from "./components/CardScoutLogo";
+import { FAQButton } from "./components/FAQButton";
 import { promptToAnswers } from "./lib/promptToAnswers";
 import { STORAGE_KEY } from "./lib/friends";
 import { getTheme } from "./lib/theme";
@@ -33,64 +34,9 @@ function logPrompt(prompt: string, outcome: "success" | "error", errorMessage?: 
   }).catch(() => {});
 }
 
-type SpeechRecognitionInstance = {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-  onresult: ((e: { results: Iterable<{ isFinal: boolean; item: (i: number) => { transcript: string } }> }) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-};
-
 export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isListening, setIsListening] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
-
-  useEffect(() => {
-    const SR = typeof window !== "undefined" && (window as unknown as { SpeechRecognition?: new () => SpeechRecognitionInstance }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).webkitSpeechRecognition;
-    if (!SR) return;
-    setSpeechSupported(true);
-    const recognition = new SR();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-    recognition.onresult = (e: { results: Iterable<{ isFinal: boolean; item: (i: number) => { transcript: string } }> }) => {
-      const transcript = Array.from(e.results)
-        .filter((r) => r.isFinal)
-        .map((r) => r.item(0).transcript)
-        .join("")
-        .trim();
-      if (transcript) {
-        setPrompt((prev) => (prev ? `${prev} ${transcript}` : transcript));
-      }
-    };
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
-    recognitionRef.current = recognition;
-    return () => {
-      recognition.abort();
-      recognitionRef.current = null;
-    };
-  }, []);
-
-  function toggleListening() {
-    if (!recognitionRef.current) return;
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      setError(null);
-      recognitionRef.current.start();
-      setIsListening(true);
-    }
-  }
-
   const theme = getTheme("personal");
 
   function handlePromptSubmit(e: React.FormEvent) {
@@ -123,14 +69,11 @@ export default function Home() {
         background: theme.backgroundGradient
       }}
     >
-      <Image
-        src="/card-scout-logo.png"
-        alt="Card Scout"
+      <CardScoutLogo
         width={286}
         height={156}
-        priority
-        unoptimized
-        style={{ marginBottom: 20, objectFit: "contain", background: "transparent" }}
+        mode="personal"
+        style={{ marginBottom: 20, flexShrink: 0 }}
       />
 
       <p style={{ marginBottom: 24, color: "var(--text-muted)", textAlign: "center", maxWidth: 420 }}>
@@ -149,7 +92,10 @@ export default function Home() {
           marginBottom: 32
         }}
       >
-        <div style={{ position: "relative", width: "100%", marginBottom: 12 }}>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 8, textAlign: "center", width: "100%" }}>
+          Beta mode — please use simple words or phrases only.
+        </p>
+        <div style={{ width: "100%", marginBottom: 12 }}>
           <input
             type="text"
             value={prompt}
@@ -158,7 +104,6 @@ export default function Home() {
             style={{
               width: "100%",
               padding: "14px 18px",
-              paddingRight: 48,
               fontSize: 16,
               borderRadius: 10,
               border: error ? "2px solid #dc2626" : `2px solid ${theme.primaryLighter}`,
@@ -167,38 +112,6 @@ export default function Home() {
             }}
             aria-label="Describe the card you want"
           />
-          {speechSupported && (
-            <button
-              type="button"
-              className="home-voice-btn"
-              onClick={toggleListening}
-              title={isListening ? "Stop listening" : "Voice input"}
-              aria-label={isListening ? "Stop listening" : "Start voice input"}
-              style={{
-                position: "absolute",
-                right: 10,
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: 36,
-                height: 36,
-                borderRadius: "50%",
-                border: "none",
-                background: isListening ? "#dc2626" : theme.primaryLight,
-                color: isListening ? "#fff" : theme.primary,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
-              </svg>
-            </button>
-          )}
         </div>
         {error && (
           <p style={{ color: "#dc2626", fontSize: 14, marginBottom: 12, textAlign: "center" }}>
@@ -210,14 +123,15 @@ export default function Home() {
           className="home-primary-btn"
           disabled={!prompt.trim()}
           style={{
-            padding: "12px 24px",
+            padding: "14px 28px",
             borderRadius: 10,
-            background: prompt.trim() ? theme.primary : theme.primaryLighter,
+            background: prompt.trim() ? theme.primaryDark : "#94a3b8",
             color: "white",
             border: "none",
             fontSize: 16,
-            fontWeight: 600,
-            cursor: prompt.trim() ? "pointer" : "not-allowed"
+            fontWeight: 700,
+            cursor: prompt.trim() ? "pointer" : "not-allowed",
+            boxShadow: prompt.trim() ? `0 2px 8px ${theme.primaryDark}99` : "0 2px 4px rgba(0,0,0,0.1)"
           }}
         >
           Get recommendations
@@ -244,6 +158,8 @@ export default function Home() {
       >
         Answer questions instead →
       </a>
+
+      <FAQButton />
     </div>
   );
 }

@@ -27,6 +27,9 @@
   --input-border: #94a3b8;
   --pill-bg: #f1f5f9;
   --pill-text: #475569;
+  --faq-btn-bg: #0d9488;
+  --faq-btn-text: #ffffff;
+  --faq-btn-hover-bg: #0f766e;
 }
 
 @theme inline {
@@ -64,6 +67,9 @@
     --input-border: #64748b;
     --pill-bg: #404040;
     --pill-text: #cbd5e1;
+    --faq-btn-bg: #14b8a6;
+    --faq-btn-text: #ffffff;
+    --faq-btn-hover-bg: #0d9488;
   }
 }
 
@@ -71,6 +77,49 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* FAQ floating button: right bottom desktop, bottom center mobile; distinct teal color */
+.faq-float-btn {
+  position: fixed;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--faq-btn-bg);
+  color: var(--faq-btn-text);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: background 0.2s ease, transform 0.15s ease;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+}
+.faq-float-btn:hover {
+  background: var(--faq-btn-hover-bg);
+  color: var(--faq-btn-text);
+  transform: translateY(-1px);
+}
+/* Results page: FAQ sits ~0.5" above the feedback button (feedback is 52px tall + 24px gap) */
+.faq-float-btn.faq-above-feedback {
+  bottom: max(88px, calc(env(safe-area-inset-bottom) + 64px));
+}
+@media (max-width: 768px) {
+  .faq-float-btn {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+  .faq-float-btn:hover {
+    transform: translateX(-50%) translateY(-1px);
+  }
+  .faq-float-btn.faq-above-feedback {
+    bottom: max(88px, calc(env(safe-area-inset-bottom) + 64px));
+  }
 }
 
 /* ========== Results page: mobile-friendly layout ========== */
@@ -344,5 +393,25 @@ body {
   .results-mode-btn-unselected,
   .wizard-mode-btn-unselected {
     color: var(--text-primary) !important;
+  }
+}
+
+/* ========== Maximize Spend Mode: dark mode (match results page) ========== */
+@media (prefers-color-scheme: dark) {
+  .max-rewards-page {
+    background: var(--surface) !important;
+    color: var(--text-primary);
+  }
+  .max-rewards-page header {
+    background: var(--surface-elevated) !important;
+    border-color: var(--border) !important;
+  }
+  .max-rewards-input {
+    color: var(--text-primary) !important;
+    background: var(--input-bg) !important;
+    border-color: var(--border) !important;
+  }
+  .max-rewards-input::placeholder {
+    color: var(--text-muted) !important;
   }
 }

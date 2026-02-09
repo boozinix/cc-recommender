@@ -5,6 +5,8 @@ import Link from "next/link";
 import Papa from "papaparse";
 import { computeOptimalPlan, type CardForAllocation, type AllocationItem } from "@/app/lib/spendAllocation";
 import { getTheme } from "@/app/lib/theme";
+import { FAQButton } from "@/app/components/FAQButton";
+import { getEstimatedBonusValueUsd } from "@/app/lib/pointValues";
 
 type Card = CardForAllocation & {
   issuer: string;
@@ -14,6 +16,7 @@ type Card = CardForAllocation & {
   spend_time_frame?: string;
   best_for?: string;
   application_link?: string;
+  annual_fee?: string;
 };
 
 const issuerColors: Record<string, { bg: string; text: string }> = {
@@ -55,6 +58,13 @@ function getRewardModelLabel(rewardModel: string): string {
 }
 
 function parseMinSpend(raw: string | undefined): number {
+  if (!raw || !raw.trim()) return 0;
+  const cleaned = raw.replace(/[$,]/g, "").trim();
+  const n = parseInt(cleaned, 10);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+function parseBonus(raw: string | undefined): number {
   if (!raw || !raw.trim()) return 0;
   const cleaned = raw.replace(/[$,]/g, "").trim();
   const n = parseInt(cleaned, 10);
@@ -125,6 +135,8 @@ export default function MaxRewardsModePage() {
   const [plan, setPlan] = useState<ReturnType<typeof computeOptimalPlan> | null>(null);
   const [leavingAllocation, setLeavingAllocation] = useState<AllocationItem[]>([]);
   const [enteringCardNames, setEnteringCardNames] = useState<Set<string>>(new Set());
+  const [ownedCards, setOwnedCards] = useState<string[]>([]);
+  const [isCalculating, setIsCalculating] = useState(false);
   const previousAllocationRef = useRef<AllocationItem[]>([]);
 
   useEffect(() => {
@@ -132,7 +144,11 @@ export default function MaxRewardsModePage() {
       .then((r) => r.text())
       .then((cardsText) => {
         const parsed = Papa.parse<Card>(cardsText, { header: true, skipEmptyLines: true });
-        setCards(parsed.data);
+        const enriched = parsed.data.map((c: Card) => ({
+          ...c,
+          estimated_bonus_value_usd: String(getEstimatedBonusValueUsd(c))
+        }));
+        setCards(enriched);
       })
       .catch(() => setCards([]));
   }, []);
@@ -142,22 +158,38 @@ export default function MaxRewardsModePage() {
     [cards, rewardType, cardTypeFilter]
   );
 
-  // When filter changes and we already have a plan, re-run optimizer with same budget/max so results update
+  // Excluded = Have it / Not interested. Re-optimize from remaining pool so we still show same number of cards (next best).
+  const cardsForOptimizer = useMemo(
+    () => filteredCards.filter((c) => !ownedCards.includes(c.card_name)),
+    [filteredCards, ownedCards]
+  );
+
+  // When filter or excluded cards change and we already have a plan, re-run optimizer after a short delay (debounce) so UI stays responsive.
+  const ownedCardsKey = JSON.stringify(ownedCards);
+  const filterKey = `${rewardType}-${cardTypeFilter}-${filteredCards.length}`;
+  const reoptimizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (plan === null) return;
-    const budget = Math.max(0, parseInt(spendAmount.replace(/[$,]/g, ""), 10) || 0);
-    const max = maxCards.trim() === "" ? 20 : Math.max(1, Math.min(20, parseInt(maxCards, 10) || 5));
-    if (budget <= 0 || filteredCards.length === 0) {
-      setPlan(null);
-      setLeavingAllocation([]);
-      setEnteringCardNames(new Set());
-      previousAllocationRef.current = [];
-      return;
-    }
-    const result = computeOptimalPlan(filteredCards, budget, max);
-    setPlan(result);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when filter/card pool changes
-  }, [rewardType, cardTypeFilter, filteredCards]);
+    if (reoptimizeTimeoutRef.current) clearTimeout(reoptimizeTimeoutRef.current);
+    reoptimizeTimeoutRef.current = setTimeout(() => {
+      reoptimizeTimeoutRef.current = null;
+      const budget = Math.max(0, parseInt(spendAmount.replace(/[$,]/g, ""), 10) || 0);
+      const max = maxCards.trim() === "" ? 20 : Math.max(1, Math.min(20, parseInt(maxCards, 10) || 5));
+      const pool = filteredCards.filter((c) => !ownedCards.includes(c.card_name));
+      if (budget <= 0 || pool.length === 0) {
+        setPlan(null);
+        setLeavingAllocation([]);
+        setEnteringCardNames(new Set());
+        previousAllocationRef.current = [];
+        return;
+      }
+      const result = computeOptimalPlan(pool, budget, max);
+      setPlan(result);
+    }, 250);
+    return () => {
+      if (reoptimizeTimeoutRef.current) clearTimeout(reoptimizeTimeoutRef.current);
+    };
+  }, [filterKey, ownedCardsKey]);
 
   // Enter/leave animation when plan allocation changes
   useEffect(() => {
@@ -185,25 +217,33 @@ export default function MaxRewardsModePage() {
     e.preventDefault();
     const budget = Math.max(0, parseInt(spendAmount.replace(/[$,]/g, ""), 10) || 0);
     const max = maxCards.trim() === "" ? 20 : Math.max(1, Math.min(20, parseInt(maxCards, 10) || 5));
-    if (budget <= 0 || filteredCards.length === 0) {
+    if (budget <= 0 || cardsForOptimizer.length === 0) {
       setPlan(null);
       return;
     }
-    const result = computeOptimalPlan(filteredCards, budget, max);
-    setPlan(result);
+    setIsCalculating(true);
+    setTimeout(() => {
+      try {
+        const result = computeOptimalPlan(cardsForOptimizer, budget, max);
+        setPlan(result);
+      } finally {
+        setIsCalculating(false);
+      }
+    }, 0);
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--text-primary)]">
-      <header className="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-4">
+    <div className="max-rewards-page min-h-screen bg-[var(--surface)] text-[var(--text-primary)]">
+      <header className="border-b border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-4">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <Link
             href="/results"
-            style={{ color: theme.primary, fontWeight: 600, textDecoration: "none" }}
+            className="font-semibold no-underline hover:opacity-90"
+            style={{ color: theme.primary }}
           >
             ← Back
           </Link>
-          <h1 className="text-xl font-semibold">Max Rewards Mode</h1>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Maximize Spend Mode</h1>
           <span className="w-12" aria-hidden />
         </div>
       </header>
@@ -218,75 +258,20 @@ export default function MaxRewardsModePage() {
             from { opacity: 1; transform: translateY(0); }
             to { opacity: 0; transform: translateY(24px); }
           }
+          @keyframes maxRewardsSpinner {
+            to { transform: rotate(360deg); }
+          }
           .max-rewards-card-enter { animation: maxRewardsCardEnter 0.55s ease-out forwards; }
           .max-rewards-card-leave { animation: maxRewardsCardLeave 0.55s ease-out forwards; }
+          .max-rewards-spinner { animation: maxRewardsSpinner 0.8s linear infinite; }
         `}} />
         <p className="mb-6 text-[var(--text-secondary)]">
           To maximize rewards, tell us how much you can spend and (optionally) how many cards you can apply for. We’ll show the best card plan in order.
         </p>
 
-        <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] p-4 shadow-sm">
-          <div className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-            What kind of rewards do you want to maximize?
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                { value: "All" as const, label: "All cards" },
-                { value: "General" as const, label: "Bank Rewards (General)" },
-                { value: "Airline" as const, label: "Airline" },
-                { value: "Hotel" as const, label: "Hotel" }
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setRewardType(opt.value)}
-                className="rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors"
-                style={{
-                  borderColor: rewardType === opt.value ? theme.primary : "var(--border)",
-                  background: rewardType === opt.value ? theme.primary : "var(--surface-elevated)",
-                  color: rewardType === opt.value ? "#ffffff" : theme.primaryDark
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] p-4 shadow-sm">
-          <div className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-            Personal only, business only, or both?
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                { value: "both" as const, label: "Personal or Business" },
-                { value: "personal" as const, label: "Personal only" },
-                { value: "business" as const, label: "Business only" }
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setCardTypeFilter(opt.value)}
-                className="rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors"
-                style={{
-                  borderColor: cardTypeFilter === opt.value ? theme.primary : "var(--border)",
-                  background: cardTypeFilter === opt.value ? theme.primary : "var(--surface-elevated)",
-                  color: cardTypeFilter === opt.value ? "#ffffff" : theme.primaryDark
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <form
           onSubmit={handleSubmit}
-          className="mb-10 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-sm"
+          className="mb-8 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-sm"
         >
           <div className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-end">
             <label className="flex flex-col gap-1">
@@ -299,7 +284,7 @@ export default function MaxRewardsModePage() {
                 placeholder="e.g. 20000"
                 value={spendAmount}
                 onChange={(e) => setSpendAmount(e.target.value)}
-                className="w-full max-w-[200px] rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-2.5 text-base"
+                className="max-rewards-input w-full max-w-[200px] rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-2.5 text-base text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
                 required
               />
             </label>
@@ -313,7 +298,7 @@ export default function MaxRewardsModePage() {
                 placeholder="e.g. 5 or leave blank"
                 value={maxCards}
                 onChange={(e) => setMaxCards(e.target.value)}
-                className="w-full max-w-[200px] rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-2.5 text-base"
+                className="max-rewards-input w-full max-w-[200px] rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-2.5 text-base text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
             </label>
             <button
@@ -326,18 +311,99 @@ export default function MaxRewardsModePage() {
           </div>
         </form>
 
-        {plan && (() => {
+        <div className="mb-8 flex flex-col gap-6">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] p-4 shadow-sm">
+            <div className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
+              What kind of rewards do you want to maximize?
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { value: "All" as const, label: "All cards" },
+                  { value: "General" as const, label: "Bank Rewards (General)" },
+                  { value: "Airline" as const, label: "Airline" },
+                  { value: "Hotel" as const, label: "Hotel" }
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setRewardType(opt.value)}
+                  className="rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors"
+                  style={{
+                    borderColor: rewardType === opt.value ? theme.primary : "var(--border)",
+                    background: rewardType === opt.value ? theme.primary : "var(--surface-elevated)",
+                    color: rewardType === opt.value ? "#ffffff" : "var(--text-primary)"
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] p-4 shadow-sm">
+            <div className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
+              Personal only, business only, or both?
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { value: "both" as const, label: "Personal or Business" },
+                  { value: "personal" as const, label: "Personal only" },
+                  { value: "business" as const, label: "Business only" }
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setCardTypeFilter(opt.value)}
+                  className="rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors"
+                  style={{
+                    borderColor: cardTypeFilter === opt.value ? theme.primary : "var(--border)",
+                    background: cardTypeFilter === opt.value ? theme.primary : "var(--surface-elevated)",
+                    color: cardTypeFilter === opt.value ? "#ffffff" : "var(--text-primary)"
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {isCalculating && (
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-6 py-5">
+            <span className="max-rewards-spinner inline-block h-6 w-6 shrink-0 rounded-full border-2 border-[var(--border)] border-t-[var(--text-primary)]" aria-hidden />
+            <span className="text-[var(--text-secondary)]">Calculating…</span>
+          </div>
+        )}
+
+        {plan && !isCalculating && (() => {
           const sortedLeaving = sortAllocationByIssuer(leavingAllocation);
           const sortedAllocation = sortAllocationByIssuer(plan.allocation);
+          const mainAllocation = sortedAllocation.filter(({ card }) => !ownedCards.includes((card as Card).card_name));
           return (
           <>
             <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
               <div className="mb-2 text-sm font-bold text-[var(--text-primary)]">Your optimal plan</div>
-              <div className="flex flex-wrap gap-6 text-sm text-[var(--text-secondary)]">
-                <span><strong>Total bonus:</strong> ${plan.totalBonus.toLocaleString()}</span>
-                <span><strong>Spend used:</strong> ${plan.totalSpendUsed.toLocaleString()}</span>
-                <span><strong>Cards:</strong> {plan.chosenCards.length}</span>
-              </div>
+              {(() => {
+                const totalFees = plan.allocation.reduce((sum, { card }) => sum + parseInt((card as Card).annual_fee || "0", 10), 0);
+                const netBonus = plan.totalBonus - totalFees;
+                return (
+                  <>
+                    <div className="flex flex-wrap gap-6 text-sm text-[var(--text-secondary)]">
+                      <span><strong>Total bonus:</strong> ${plan.totalBonus.toLocaleString()}</span>
+                      <span><strong>Spend used:</strong> ${plan.totalSpendUsed.toLocaleString()}</span>
+                      <span><strong>Fees:</strong> ${totalFees.toLocaleString()}</span>
+                      <span><strong>Cards:</strong> {plan.chosenCards.length}</span>
+                    </div>
+                    <div className="mt-3 border-t border-[var(--border)] pt-3 text-sm">
+                      <strong className="font-bold text-[var(--text-primary)]">Net bonus: ${netBonus.toLocaleString()}</strong>
+                      <span className="text-[var(--text-secondary)]"> (bonus minus annual fees)</span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             <div className="flex flex-col gap-5">
@@ -379,7 +445,7 @@ export default function MaxRewardsModePage() {
                   </div>
                 );
               })}
-              {sortedAllocation.map(({ card, minSpend, bonus }, idx) => {
+              {mainAllocation.map(({ card, minSpend, bonus }, idx) => {
                 const c = card as Card;
                 const style = getIssuerStyle(c.issuer);
                 const bankLogo = getBankLogoPath(c.issuer);
@@ -402,9 +468,28 @@ export default function MaxRewardsModePage() {
                       {bankLogo ? <img src={bankLogo} alt="" className="h-full w-full object-contain" /> : null}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="mb-2 text-lg font-bold leading-tight text-[var(--text-primary)]">
-                        {c.card_name}
-                      </h3>
+                      <div className="mb-2 flex items-start justify-between gap-3">
+                        <h3 className="text-lg font-bold leading-tight text-[var(--text-primary)]">
+                          {c.card_name}
+                        </h3>
+                        <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs text-[var(--text-muted)] whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 cursor-pointer"
+                            checked={ownedCards.includes(c.card_name)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setOwnedCards((prev) =>
+                                prev.includes(c.card_name)
+                                  ? prev.filter((n) => n !== c.card_name)
+                                  : [...prev, c.card_name]
+                              );
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          Have it / Not interested
+                        </label>
+                      </div>
                       <div className="mb-2 flex flex-wrap items-center gap-1.5">
                         <span
                           className="rounded-md px-2.5 py-1 text-[11px] font-semibold"
@@ -455,6 +540,72 @@ export default function MaxRewardsModePage() {
           );
         })()}
 
+        {/* Floating section at bottom: cards user marked "Have it / Not interested" — same as results page, with Remove to bring back */}
+        {ownedCards.length > 0 && (
+          <>
+            <h3 className="mt-10 mb-3 text-base font-bold text-[var(--text-primary)]">
+              Cards you already have / not interested
+            </h3>
+            <p className="mb-4 text-sm text-[var(--text-muted)]">
+              These are excluded from your plan. Remove one to consider it again in the next best plan.
+            </p>
+            <div className="flex flex-col gap-5">
+              {ownedCards.map((cardName) => {
+                const c = filteredCards.find((x) => x.card_name === cardName) as Card | undefined;
+                if (!c) return null;
+                const style = getIssuerStyle(c.issuer);
+                const bankLogo = getBankLogoPath(c.issuer);
+                const rewardLabel = getRewardModelLabel(c.reward_model || "");
+                const minSpend = parseMinSpend(c.minimum_spend_amount);
+                const bonus = parseBonus(c.estimated_bonus_value_usd);
+                return (
+                  <div
+                    key={`excluded-${cardName}`}
+                    className="flex gap-4 rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm"
+                  >
+                    <div
+                      className="flex h-[72px] w-[72px] min-w-[72px] flex-shrink-0 items-center justify-center overflow-hidden rounded-lg"
+                      style={{
+                        background: bankLogo ? "transparent" : "linear-gradient(145deg, var(--pill-bg) 0%, var(--border) 100%)"
+                      }}
+                    >
+                      {bankLogo ? <img src={bankLogo} alt="" className="h-full w-full object-contain" /> : null}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex items-start justify-between gap-3">
+                        <h3 className="text-lg font-bold leading-tight text-[var(--text-primary)]">{c.card_name}</h3>
+                        <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs text-[var(--text-muted)] whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 cursor-pointer"
+                            checked
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setOwnedCards((prev) => prev.filter((n) => n !== cardName));
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          Remove
+                        </label>
+                      </div>
+                      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-md px-2.5 py-1 text-[11px] font-semibold" style={{ background: style.bg, color: style.text }}>{c.issuer}</span>
+                        {c.card_type === "business" && (
+                          <span className="rounded-md px-2.5 py-1 text-[11px] font-semibold" style={{ background: theme.businessBadge.bg, color: theme.businessBadge.text }}>Business card</span>
+                        )}
+                        {rewardLabel && <span className="rounded-md bg-[var(--pill-bg)] px-2 py-1 text-[11px] text-[var(--pill-text)]">{rewardLabel}</span>}
+                      </div>
+                      <div className="mb-2 inline-block rounded-md bg-[var(--bonus-bg)] px-2.5 py-1.5 text-xs text-[var(--bonus-text)]">
+                        Put <strong>${minSpend.toLocaleString()}</strong> here → <strong>${bonus.toLocaleString()}</strong> bonus
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
         {cards.length === 0 && !plan && (
           <p className="text-sm text-[var(--text-muted)]">Loading cards…</p>
         )}
@@ -462,6 +613,7 @@ export default function MaxRewardsModePage() {
           <p className="text-sm text-[var(--text-muted)]">No cards with signup bonuses match the selected reward type. Try “All cards” or a different type.</p>
         )}
       </main>
+      <FAQButton />
     </div>
   );
 }
