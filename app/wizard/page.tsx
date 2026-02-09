@@ -354,7 +354,7 @@ export default function Wizard() {
         <div style={{ fontSize: 14, marginBottom: 6 }}>
           Step {step + 1} of {questions.length}
         </div>
-        <div style={{ height: 6, background: "#e5e7eb", borderRadius: 4 }}>
+        <div className="wizard-progress-track" style={{ height: 6, background: "#e5e7eb", borderRadius: 4 }}>
           <div
             style={{
               height: 6,
@@ -543,7 +543,7 @@ export default function Wizard() {
                         <span>{index + 1}. {label}</span>
                         <div
                           className="wizard-rank-buttons"
-                          style={{ display: "flex", gap: 4, flexShrink: 0 }}
+                          style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, alignSelf: "center" }}
                           onClick={e => e.stopPropagation()}
                           onPointerDown={e => e.stopPropagation()}
                         >
@@ -687,6 +687,7 @@ export default function Wizard() {
           </div>
         </div>
       )}
+      <div className="wizard-mobile-faq-spacer" aria-hidden />
       <FAQButton />
     </div>
   );

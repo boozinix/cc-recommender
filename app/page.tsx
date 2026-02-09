@@ -7,12 +7,20 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { CardScoutLogo } from "./components/CardScoutLogo";
 import { FAQButton } from "./components/FAQButton";
 import { promptToAnswers } from "./lib/promptToAnswers";
 import { STORAGE_KEY } from "./lib/friends";
 import { getTheme } from "./lib/theme";
+
+const SUGGESTIONS = [
+  "cash back, groceries",
+  "travel rewards, no annual fee",
+  "big signup bonus",
+  "no annual fee",
+  "business card"
+];
 
 const FORMSPREE_ENDPOINT = process.env.NEXT_PUBLIC_FORMSPREE_ID
   ? `https://formspree.io/f/${process.env.NEXT_PUBLIC_FORMSPREE_ID}`
@@ -37,7 +45,19 @@ function logPrompt(prompt: string, outcome: "success" | "error", errorMessage?: 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionRef = useRef<HTMLDivElement>(null);
   const theme = getTheme("personal");
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (suggestionRef.current && !suggestionRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   function handlePromptSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -77,7 +97,7 @@ export default function Home() {
       />
 
       <p style={{ marginBottom: 24, color: "var(--text-muted)", textAlign: "center", maxWidth: 420 }}>
-        One stop shop to find your next credit card. Answer a few questions or describe what you want.
+        One stop shop to find your next credit card. We'll help you find within less than 30 seconds.
       </p>
 
       {/* Chat-style prompt */}
@@ -95,11 +115,12 @@ export default function Home() {
         <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 8, textAlign: "center", width: "100%" }}>
           Beta mode — please use simple words or phrases only.
         </p>
-        <div style={{ width: "100%", marginBottom: 12 }}>
+        <div ref={suggestionRef} style={{ position: "relative", width: "100%", marginBottom: 12 }}>
           <input
             type="text"
             value={prompt}
             onChange={(e) => { setPrompt(e.target.value); setError(null); }}
+            onFocus={() => setShowSuggestions(true)}
             placeholder="e.g. travel card with higher rewards, no annual fee cashback"
             style={{
               width: "100%",
@@ -111,7 +132,65 @@ export default function Home() {
               boxSizing: "border-box"
             }}
             aria-label="Describe the card you want"
+            aria-expanded={showSuggestions}
+            aria-haspopup="listbox"
+            autoComplete="off"
           />
+          {showSuggestions && (
+            <ul
+              role="listbox"
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                margin: 0,
+                marginTop: 4,
+                padding: 4,
+                listStyle: "none",
+                background: "var(--surface-elevated)",
+                border: "1px solid var(--border)",
+                borderRadius: 10,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                zIndex: 10,
+                maxHeight: 240,
+                overflowY: "auto"
+              }}
+            >
+              {SUGGESTIONS.map((suggestion) => (
+                <li key={suggestion}>
+                  <button
+                    type="button"
+                    role="option"
+                    onClick={() => {
+                      setPrompt(suggestion);
+                      setError(null);
+                      setShowSuggestions(false);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      textAlign: "left",
+                      border: "none",
+                      borderRadius: 6,
+                      background: "transparent",
+                      color: "var(--text-primary)",
+                      fontSize: 14,
+                      cursor: "pointer"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = theme.primaryLight;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    {suggestion}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         {error && (
           <p style={{ color: "#dc2626", fontSize: 14, marginBottom: 12, textAlign: "center" }}>
@@ -156,7 +235,7 @@ export default function Home() {
           border: `2px solid ${theme.primary}`
         }}
       >
-        Answer questions instead →
+        Answer 3 simple questions!
       </a>
 
       <FAQButton />

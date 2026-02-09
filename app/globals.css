@@ -228,6 +228,10 @@ body {
     justify-content: center;
     box-sizing: border-box;
   }
+  /* Wizard: allow tap-targets to shrink so layout doesn't break on narrow screens */
+  .wizard-page .tap-target {
+    min-width: 0;
+  }
 }
 
 /* Fixed elements: avoid notch/home indicator (position from safe edges) */
@@ -243,14 +247,43 @@ body {
 }
 
 /* ========== Wizard: mobile layout ========== */
-@media (max-width: 600px) {
+.wizard-mobile-faq-spacer {
+  display: none;
+  height: 0;
+}
+@media (max-width: 768px) {
   .wizard-page {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+    padding-bottom: 0 !important;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100vw;
+    min-width: 0;
+  }
+  .wizard-page > * {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .wizard-mode-toggle {
+    flex-wrap: wrap;
+    justify-content: center;
   }
   .wizard-progress-wrap {
     width: 100% !important;
     max-width: 100% !important;
+  }
+  .wizard-mobile-faq-spacer {
+    display: block;
+    height: 80px;
+    min-height: 80px;
+    flex-shrink: 0;
+  }
+}
+@media (max-width: 600px) {
+  .wizard-page {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
   }
   .wizard-options-grid button {
     min-height: 48px;
@@ -270,9 +303,8 @@ body {
     flex-wrap: wrap;
   }
   .wizard-ranking-row .wizard-rank-buttons {
-    margin-top: 4px;
-    width: 100%;
-    justify-content: flex-end;
+    align-items: center;
+    align-self: center;
   }
 }
 
@@ -369,6 +401,26 @@ body {
 
 /* ========== Wizard: dark-mode-only overrides ========== */
 @media (prefers-color-scheme: dark) {
+  .wizard-page {
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+  }
+  .wizard-page h2 {
+    color: var(--text-primary) !important;
+  }
+  .wizard-progress-wrap {
+    color: var(--text-secondary) !important;
+  }
+  .wizard-progress-track {
+    background: var(--border) !important;
+  }
+  .wizard-mode-toggle button {
+    border-color: var(--border) !important;
+  }
+  .wizard-mode-toggle .wizard-mode-btn-unselected {
+    background: var(--surface-elevated) !important;
+    color: var(--text-primary) !important;
+  }
   .wizard-prev-answer-row {
     background: var(--surface) !important;
     border-color: var(--border) !important;
@@ -384,15 +436,104 @@ body {
   .wizard-helper {
     color: var(--text-secondary) !important;
   }
+  .wizard-options-grid button {
+    border-color: var(--border) !important;
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+  }
   .wizard-option-btn-selected {
-    color: #1e293b !important;
+    background: var(--surface-elevated) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
   }
   .wizard-continue-btn {
     color: #ffffff !important;
   }
+  .wizard-ranking-row {
+    border-color: var(--border) !important;
+    background: var(--surface-elevated) !important;
+    color: var(--text-primary) !important;
+  }
+  .wizard-ranking-row span {
+    color: var(--text-primary) !important;
+  }
+  .wizard-ranking-row .tap-target {
+    color: var(--text-muted) !important;
+    border-color: var(--border) !important;
+    background: var(--surface) !important;
+  }
   .results-mode-btn-unselected,
   .wizard-mode-btn-unselected {
     color: var(--text-primary) !important;
+  }
+}
+
+/* ========== FAQ page: dark mode ========== */
+@media (prefers-color-scheme: dark) {
+  .faq-page {
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+  }
+  .faq-page .faq-back-link {
+    color: var(--text-primary) !important;
+  }
+  .faq-page .faq-main-title {
+    color: var(--text-primary) !important;
+  }
+  .faq-page .faq-section-title {
+    color: var(--text-primary) !important;
+  }
+  .faq-page .faq-table-title {
+    color: var(--text-primary) !important;
+  }
+}
+
+/* ========== Landing (home) page: dark mode ========== */
+@media (prefers-color-scheme: dark) {
+  .home-page {
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+  }
+  .home-page h1,
+  .home-page p {
+    color: var(--text-primary) !important;
+  }
+  .home-page input {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border) !important;
+  }
+  .home-page input::placeholder {
+    color: var(--text-muted) !important;
+  }
+  .home-wizard-link {
+    color: var(--text-primary) !important;
+    border-color: var(--border) !important;
+  }
+  .home-wizard-link:hover {
+    border-color: var(--text-muted) !important;
+  }
+}
+
+/* ========== Login page: dark mode (matches wizard) ========== */
+@media (prefers-color-scheme: dark) {
+  .login-page {
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+  }
+  .login-page p {
+    color: var(--text-secondary) !important;
+  }
+  .login-page input {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border) !important;
+  }
+  .login-page input::placeholder {
+    color: var(--text-muted) !important;
+  }
+  .login-page button[type="button"] {
+    color: #fff !important;
   }
 }
 

@@ -83,7 +83,7 @@ function PointsTable() {
 
   const TableBlock = ({ title, data }: { title: string; data: [string, number][] }) => (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ fontWeight: 600, marginBottom: 8, color: theme.primaryDark }}>{title}</div>
+      <div className="faq-table-title" style={{ fontWeight: 600, marginBottom: 8, color: theme.primaryDark }}>{title}</div>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
         <thead>
           <tr style={{ borderBottom: "2px solid var(--border)" }}>
@@ -115,6 +115,7 @@ function PointsTable() {
 export default function FAQPage() {
   return (
     <div
+      className="faq-page"
       style={{
         minHeight: "100vh",
         background: theme.backgroundGradient,
@@ -125,6 +126,7 @@ export default function FAQPage() {
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         <Link
           href="/"
+          className="faq-back-link"
           style={{
             display: "inline-block",
             marginBottom: 24,
@@ -138,6 +140,7 @@ export default function FAQPage() {
         </Link>
 
         <h1
+          className="faq-main-title"
           style={{
             fontSize: 28,
             fontWeight: 700,
@@ -162,6 +165,7 @@ export default function FAQPage() {
             }}
           >
             <h2
+              className="faq-section-title"
               style={{
                 fontSize: 17,
                 fontWeight: 700,
@@ -199,6 +203,7 @@ export default function FAQPage() {
         <div style={{ marginTop: 24, textAlign: "center" }}>
           <Link
             href="/"
+            className="faq-cta-button"
             style={{
               display: "inline-block",
               padding: "12px 24px",
