@@ -1,0 +1,5 @@
+# For get_card_summary.py and run_all_cards_chatgpt.py (OpenAI/ChatGPT API)
+openai>=1.0.0
+
+# Optional: only needed for Excel output (--output file.xlsx)
+openpyxl>=3.1.0
