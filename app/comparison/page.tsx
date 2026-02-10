@@ -242,8 +242,8 @@ function ComparisonPageContent() {
           style={{
             display: "inline-block",
             padding: "10px 18px",
-            borderRadius: 999,
-            background: theme.primary,
+            borderRadius: 8,
+            background: "#111827",
             color: "#fff",
             textDecoration: "none",
             fontWeight: 600
@@ -359,7 +359,7 @@ function ComparisonPageContent() {
   };
 
   return (
-    <div className="comparison-page-wrap" style={{ padding: 40, fontFamily: "system-ui", maxWidth: 1400, margin: "0 auto", background: "var(--gradient-section)" }}>
+    <div className="comparison-page-wrap" style={{ padding: 40, fontFamily: "system-ui", maxWidth: 1400, margin: "0 auto", background: "var(--gradient-section)" }} data-card-mode={compareThemeMode}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
         <h1 style={{ fontSize: 28, margin: 0, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Compare cards</h1>
         <Link

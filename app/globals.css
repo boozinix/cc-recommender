@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+/* ========== Design tokens: one place for all pages ========== */
+/* Personal vs Business: set data-card-mode on a wrapper (e.g. body or layout) to switch. */
+:root,
+[data-card-mode="personal"] {
+  --accent: #1E40AF;
+  --accent-light: #dbeafe;
+  --accent-lighter: #eff6ff;
+  --accent-dark: #1E3A8A;
+  --business-badge-bg: #fce7f3;
+  --business-badge-text: #be185d;
+}
+
+[data-card-mode="business"] {
+  --accent: #9d8468;
+  --accent-light: #e8dfd4;
+  --accent-lighter: #d4c4b0;
+  --accent-dark: #5c4a3d;
+  --business-badge-bg: #e8dfd4;
+  --business-badge-text: #5c4a3d;
+}
+
 :root {
   --background: #F6F8FE;
   --foreground: #171717;
@@ -253,8 +274,8 @@ body {
   color: var(--text-primary);
 }
 .wizard-options-grid button.wizard-option-btn-selected {
-  border-color: #1E40AF;
-  background: #dbeafe;
+  border-color: var(--accent);
+  background: var(--accent-light);
 }
 
 /* ========== Wizard: mobile layout ========== */
@@ -483,7 +504,7 @@ body {
 @media (prefers-color-scheme: dark) and (max-width: 768px) {
   .wizard-page .wizard-options-grid button.wizard-option-btn-selected {
     background: #333333 !important;
-    border: 2px solid #60a5fa !important;
+    border: 2px solid var(--accent) !important;
     color: var(--text-primary) !important;
   }
 }

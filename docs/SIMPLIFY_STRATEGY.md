@@ -77,6 +77,25 @@ You can try the “one card component” idea in the sandbox first (render a few
 
 ---
 
+## 8. Next splits (refactor plan)
+
+Already done:
+
+- **Scoring engine** → `app/lib/resultsScoring.ts`. Results and sandbox-results both import from here; no duplicate scoring logic.
+
+Possible next splits (smaller files = faster to read and edit):
+
+| Split | Where | Benefit |
+|-------|--------|--------|
+| **Refinement questions config** | Extract the refinement question tree (ids, options, multiSelect) into a small module (e.g. `app/lib/refinementQuestions.ts`). | Results/sandbox pages get shorter; one place to add or change refinement questions. |
+| **Results left panel** | Extract the left column (refinement controls, "Show 3 more / fewer", business/personal toggle) into e.g. `app/components/ResultsLeftPanel.tsx`. | Results page focuses on layout and right-hand card list. |
+| **Results right panel** | Optionally extract the main card list + "other type" + leaving-cards into `ResultsRightPanel` if the main page is still too long. | Cleaner separation of concerns. |
+| **useResultsRanking hook** | Move the logic that builds ranked lists (goal ranks, brand/bank filters, dedupe, top N) into a hook like `useResultsRanking(answers, cards)`. | Page becomes mostly UI; ranking logic is testable and reusable (e.g. sandbox can use same hook). |
+
+Do these one at a time, with a commit and a quick run of the "must still work" checklist after each.
+
+---
+
 ## Summary
 
 - **Sandbox** = try ideas and refactors without touching the main app.

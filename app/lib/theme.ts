@@ -2,6 +2,10 @@
  * Single source of truth for personal vs business card mode colors.
  * Used by: wizard, results, comparison, sandbox-results.
  * To change the business card scheme later, edit BUSINESS below and it applies everywhere.
+ *
+ * CSS variables (globals.css): set data-card-mode="personal" or data-card-mode="business"
+ * on a wrapper (e.g. the page root) so that --accent, --accent-light, --business-badge-bg etc.
+ * apply everywhere; CardTile and buttons then use var(--accent) for consistent theming.
  */
 
 export type CardMode = "personal" | "business";

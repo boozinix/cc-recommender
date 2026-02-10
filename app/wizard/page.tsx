@@ -8,48 +8,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getTheme } from "@/app/lib/theme";
 import { FAQButton } from "@/app/components/FAQButton";
-
-
-
-
-// =======================
-// Questions Config
-// =======================
-const questions = [
-  {
-    id: "primary_goal",
-    question: "Rank what you want this card to be best at",
-    options: [
-      { value: "Cashback", label: "💰 Cashback" },
-      { value: "Travel", label: "✈️ Travel rewards" },
-      { value: "Bonus", label: "🎁 Signup bonus" },
-      { value: "Everyday", label: "🧾 Everyday spending" }
-    ]
-  },
-  {
-    id: "annual_fee_tolerance",
-    question: "How do you feel about annual fees?",
-    helper:
-      "Don’t worry — we’ll try to help you offset annual fees with benefits where possible.",
-    options: [
-      { value: "None", label: "❌ No annual fee" },
-      { value: "Low", label: "🙂 Up to $100" },
-      { value: "Medium", label: "😐 $100–$400" },
-      { value: "High", label: "😎 Doesn't matter" }
-    ]
-  },
-  {
-    id: "spend_comfort",
-    question:
-      "How comfortable are you meeting an initial spending requirement to earn a sign-up bonus?",
-    options: [
-      { value: "None", label: "Don’t want a bonus" },
-      { value: "Low", label: "Under $1,000" },
-      { value: "Medium", label: "Up to $5,000" },
-      { value: "High", label: "Above $5,000" }
-    ]
-  }
-];
+import { wizardQuestions as questions } from "@/app/lib/wizardQuestions";
 
 
 
@@ -307,6 +266,7 @@ export default function Wizard() {
   return (
     <div
       className="wizard-page"
+      data-card-mode={cardMode}
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -354,7 +314,7 @@ export default function Wizard() {
         <div style={{ fontSize: 14, marginBottom: 6 }}>
           Step {step + 1} of {questions.length}
         </div>
-        <div className="wizard-progress-track" style={{ height: 6, background: "#e5e7eb", borderRadius: 4 }}>
+        <div className="wizard-progress-track" style={{ height: 6, background: "var(--border-light)", borderRadius: 4 }}>
           <div
             style={{
               height: 6,
@@ -661,7 +621,7 @@ export default function Wizard() {
               disabled={!isRankingStep && !selectedValue}
               style={{
                 padding: "12px 24px",
-                borderRadius: 999,
+                borderRadius: 8,
                 background:
                   !isRankingStep && !selectedValue ? theme.primaryLighter : theme.primary,
                 color: "var(--surface-elevated)",
