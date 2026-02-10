@@ -7,16 +7,7 @@ import { computeOptimalPlan, type CardForAllocation } from "@/app/lib/spendAlloc
 import { getTheme } from "@/app/lib/theme";
 import { CardTile } from "@/app/components/CardTile";
 import { getEstimatedBonusValueUsd } from "@/app/lib/pointValues";
-
-type Card = CardForAllocation & {
-  issuer: string;
-  card_type: string;
-  reward_model: string;
-  card_family?: string;
-  spend_time_frame?: string;
-  best_for?: string;
-  application_link?: string;
-};
+import type { Card } from "@/app/lib/cardTypes";
 
 export default function ProChurnerPage() {
   const [cards, setCards] = useState<Card[]>([]);
@@ -28,11 +19,19 @@ export default function ProChurnerPage() {
     fetch("/cards.csv")
       .then((r) => r.text())
       .then((cardsText) => {
-        const parsed = Papa.parse<Card>(cardsText, { header: true, skipEmptyLines: true });
-        const enriched = parsed.data.map((c: Card) => ({
-          ...c,
-          estimated_bonus_value_usd: String(getEstimatedBonusValueUsd(c))
-        }));
+        const parsed = Papa.parse<Record<string, string>>(cardsText, { header: true, skipEmptyLines: true });
+        const enriched: Card[] = parsed.data.map((row) => {
+          const c = { ...row } as Card;
+          return {
+            ...c,
+            cashback_rate_effective: c.cashback_rate_effective ?? "",
+            intro_apr_purchase: c.intro_apr_purchase ?? "",
+            pros: c.pros ?? "",
+            cons: c.cons ?? "",
+            best_for: c.best_for ?? "",
+            estimated_bonus_value_usd: String(getEstimatedBonusValueUsd(c))
+          };
+        });
         setCards(enriched);
       })
       .catch(() => setCards([]));
@@ -125,11 +124,12 @@ export default function ProChurnerPage() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               {plan.allocation.map(({ card, minSpend, bonus }) => {
-                const c = card as Card;
+                const fullCard = cards.find((x) => x.card_name === card.card_name);
+                if (!fullCard) return null;
                 return (
                   <CardTile
-                    key={c.card_name}
-                    card={c}
+                    key={fullCard.card_name}
+                    card={fullCard}
                     showMaxRewardsLine
                     minSpendOverride={minSpend}
                     bonusOverride={bonus}

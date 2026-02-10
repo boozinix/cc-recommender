@@ -4,23 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Papa from "papaparse";
 import { computeOptimalPlan, type CardForAllocation, type AllocationItem } from "@/app/lib/spendAllocation";
-import { parseMinSpend } from "@/app/lib/cardDisplay";
+import { parseMinSpend, getRewardModelLabel } from "@/app/lib/cardDisplay";
 import { getIssuerStyle, getBankLogoPath } from "@/app/lib/issuerStyles";
 import { FAQButton } from "@/app/components/FAQButton";
 import { CardTile } from "@/app/components/CardTile";
 import { getEstimatedBonusValueUsd } from "@/app/lib/pointValues";
 import { getTheme } from "@/app/lib/theme";
-
-type Card = CardForAllocation & {
-  issuer: string;
-  card_type: string;
-  reward_model: string;
-  card_family?: string;
-  spend_time_frame?: string;
-  best_for?: string;
-  application_link?: string;
-  annual_fee?: string;
-};
+import type { Card } from "@/app/lib/cardTypes";
 
 function parseBonus(raw: string | undefined): number {
   if (!raw || !raw.trim()) return 0;
@@ -86,11 +76,19 @@ export default function MaxRewardsModePage() {
     fetch("/cards.csv")
       .then((r) => r.text())
       .then((cardsText) => {
-        const parsed = Papa.parse<Card>(cardsText, { header: true, skipEmptyLines: true });
-        const enriched = parsed.data.map((c: Card) => ({
-          ...c,
-          estimated_bonus_value_usd: String(getEstimatedBonusValueUsd(c))
-        }));
+        const parsed = Papa.parse<Record<string, string>>(cardsText, { header: true, skipEmptyLines: true });
+        const enriched: Card[] = parsed.data.map((row) => {
+          const c = { ...row } as Card;
+          return {
+            ...c,
+            cashback_rate_effective: c.cashback_rate_effective ?? "",
+            intro_apr_purchase: c.intro_apr_purchase ?? "",
+            pros: c.pros ?? "",
+            cons: c.cons ?? "",
+            best_for: c.best_for ?? "",
+            estimated_bonus_value_usd: String(getEstimatedBonusValueUsd(c))
+          };
+        });
         setCards(enriched);
       })
       .catch(() => setCards([]));
@@ -351,11 +349,12 @@ export default function MaxRewardsModePage() {
 
             <div className="flex flex-col gap-5">
               {sortedLeaving.map(({ card, minSpend, bonus }, idx) => {
-                const c = card as Card;
+                const fullCard = filteredCards.find((x) => x.card_name === card.card_name);
+                if (!fullCard) return null;
                 return (
-                  <div key={`leave-${idx}-${c.card_name}`} className="max-rewards-card-leave" style={{ marginBottom: 4 }}>
+                  <div key={`leave-${idx}-${fullCard.card_name}`} className="max-rewards-card-leave" style={{ marginBottom: 4 }}>
                     <CardTile
-                      card={c}
+                      card={fullCard}
                       showMaxRewardsLine
                       minSpendOverride={minSpend}
                       bonusOverride={bonus}
@@ -364,16 +363,17 @@ export default function MaxRewardsModePage() {
                 );
               })}
               {mainAllocation.map(({ card, minSpend, bonus }, idx) => {
-                const c = card as Card;
-                const isEntering = enteringCardNames.has(c.card_name);
+                const fullCard = filteredCards.find((x) => x.card_name === card.card_name);
+                if (!fullCard) return null;
+                const isEntering = enteringCardNames.has(fullCard.card_name);
                 return (
                   <div
-                    key={`alloc-${idx}-${c.card_name}`}
+                    key={`alloc-${idx}-${fullCard.card_name}`}
                     className={isEntering ? "max-rewards-card-enter" : ""}
                     style={isEntering ? { marginBottom: 4 } : undefined}
                   >
                     <CardTile
-                      card={c}
+                      card={fullCard}
                       showMaxRewardsLine
                       minSpendOverride={minSpend}
                       bonusOverride={bonus}
