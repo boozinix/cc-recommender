@@ -614,15 +614,6 @@ export default function Wizard() {
                     padding: "16px 24px",
                     fontSize: 18,
                     borderRadius: 10,
-                    border:
-                      answers[currentQuestion.id] === option.value
-                        ? `2px solid ${theme.primary}`
-                        : "2px solid var(--input-border)",
-                    background:
-                      answers[currentQuestion.id] === option.value
-                        ? theme.primaryLight
-                        : "var(--input-bg)",
-                    color: "var(--text-primary)",
                     cursor: "pointer",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
                   }}

@@ -246,6 +246,17 @@ body {
   }
 }
 
+/* ========== Wizard: option buttons (CSS-controlled so dark/mobile overrides work) ========== */
+.wizard-options-grid button {
+  border: 2px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text-primary);
+}
+.wizard-options-grid button.wizard-option-btn-selected {
+  border-color: #1E40AF;
+  background: #dbeafe;
+}
+
 /* ========== Wizard: mobile layout ========== */
 .wizard-mobile-faq-spacer {
   display: none;
@@ -441,9 +452,9 @@ body {
     background: var(--input-bg) !important;
     color: var(--text-primary) !important;
   }
-  .wizard-option-btn-selected {
-    background: var(--surface-elevated) !important;
-    border-color: var(--border) !important;
+  .wizard-page .wizard-options-grid button.wizard-option-btn-selected {
+    background: #333333 !important;
+    border: 2px solid #60a5fa !important;
     color: var(--text-primary) !important;
   }
   .wizard-continue-btn {
@@ -464,6 +475,15 @@ body {
   }
   .results-mode-btn-unselected,
   .wizard-mode-btn-unselected {
+    color: var(--text-primary) !important;
+  }
+}
+
+/* Wizard option selected state: explicit mobile + dark so it wins on small screens */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+  .wizard-page .wizard-options-grid button.wizard-option-btn-selected {
+    background: #333333 !important;
+    border: 2px solid #60a5fa !important;
     color: var(--text-primary) !important;
   }
 }
