@@ -26,7 +26,7 @@ const bankLogoFiles: Record<string, string> = {
   "Capital One": "capital-one.svg",
   "Bank of America": "bank-of-america.svg",
   Amex: "american-express.svg",
-  Barclays: "barclays.jpeg",
+  Barclays: "barclays.svg",
   "U.S. Bank": "usbank.png",
   "Wells Fargo": "wellsfargo.jpg",
 };
@@ -38,7 +38,7 @@ export function getBankLogoPath(issuer: string): string | null {
 
 const brandLogoFiles: Record<string, string> = {
   alaska: "alaska.svg",
-  american: "american.png",
+  american: "american.svg",
   breeze: "breeze.svg",
   choice: "choice.svg",
   delta: "delta.svg",

@@ -21,7 +21,9 @@ export const refinementQuestions: RefinementQuestion[] = [
     helper: "When bonus is your main goal, results often include travel cards. Choose to see only cashback and other non-travel cards.",
     dependsOn: (answers: Answers) => {
       const { primary } = getGoalRanks(answers);
-      return primary === "Bonus";
+      // Show this when the user is bonus-hunting or focused on everyday/cashback,
+      // so they can hard-exclude travel cards from those flows.
+      return primary === "Bonus" || primary === "Everyday";
     },
     options: [
       { value: "No", label: "No, include travel cards" },
@@ -33,7 +35,9 @@ export const refinementQuestions: RefinementQuestion[] = [
     question: "What kind of travel rewards do you prefer?",
     dependsOn: (answers: Answers) => {
       const { primary } = getGoalRanks(answers);
-      return (primary === "Travel" || primary === "Bonus") && answers.exclude_travel_cards !== "Yes";
+      // Also surface this when Everyday is the primary goal so users can
+      // still steer which travel cards appear alongside cashback picks.
+      return (primary === "Travel" || primary === "Bonus" || primary === "Everyday") && answers.exclude_travel_cards !== "Yes";
     },
     options: [
       { value: "General", label: "Bank Rewards" },

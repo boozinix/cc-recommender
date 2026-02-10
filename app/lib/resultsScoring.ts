@@ -148,8 +148,15 @@ export function scoreCard(card: Card, answers: Answers, ownedCards: string[]): n
   const bonusRatio = getBonusToMinSpendRatio(bonusValue, minSpend);
   const cashbackRate = parseFloat(card.cashback_rate_effective || "0");
   const isCashbackCard = rewardModel === "cashback";
+  const spendComfort = answers.spend_comfort as string | undefined;
 
   let score = 0;
+
+  // Hard cap: if the user said "Under $1,000" for signup bonus spend comfort,
+  // do not surface cards whose published minimum spend is at or above $1,000.
+  if (spendComfort === "Low" && minSpend >= 1000 && bonusValue > 0) {
+    return -9999;
+  }
 
   if (answers.needs_0_apr === "Yes" && primary !== "Travel") {
     if (!hasIntroAPR(card)) return -9999;
@@ -238,7 +245,25 @@ export function scoreCard(card: Card, answers: Answers, ownedCards: string[]): n
   }
 
   const caresAboutTravel = primary === "Travel" || secondary === "Travel" || tertiary === "Travel";
-  const wantsGenericTravel = answers.travel_rewards_type === "General" || !answers.travel_rewards_type;
+
+  const travelRewardsType = (answers.travel_rewards_type as string | undefined) || "";
+  const wantsGenericTravel = travelRewardsType === "General" || !travelRewardsType;
+
+  // Hard filters: when the user has expressed a travel rewards type preference
+  // (including when Everyday or Cashback is the primary goal but travel appears
+  // as a secondary/tertiary priority), restrict which travel cards can appear.
+  if (caresAboutTravel && travelRewardsType && travelRewardsType !== "No Preference") {
+    if (travelRewardsType === "General") {
+      // Bank / flexible rewards only – hide airline and hotel co-brands altogether.
+      if (rewardModel === "airline" || rewardModel === "hotel") return -9999;
+    } else if (travelRewardsType === "Airline") {
+      // User asked specifically for airline rewards – no generic or hotel travel cards.
+      if (rewardModel !== "airline") return -9999;
+    } else if (travelRewardsType === "Hotel") {
+      // Hotel-only preference – filter out airline and generic travel.
+      if (rewardModel !== "hotel") return -9999;
+    }
+  }
 
   if (caresAboutTravel) {
     if (wantsGenericTravel && isGenericTravelCard(card)) score += 30;

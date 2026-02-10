@@ -36,22 +36,38 @@ export function promptToAnswers(prompt: string): PromptResult {
 
   // ---- Primary goal: many variations ----
   const travelWords = [
-    "travel", "flight", "fly", "flying", "airline", "airlines", "hotel", "hotels",
+    "travel", "flight", "flights", "fly", "flying", "airfare", "airline", "airlines",
+    "hotel", "hotels", "hotel stays",
     "trip", "trips", "vacation", "vacations", "miles", "points", "reward", "rewards",
-    "lounge", "airport", "abroad", "international", "getaway", "getaways",
+    "rewards travel",
+    "lounge", "airport", "abroad", "international", "global acceptance", "overseas spending",
     "holiday", "holidays", "wanderlust", "road trip", "road trips", "cruise", "cruises",
     "flight rewards", "travel rewards", "travel card", "flying often", "frequent flyer",
     "traveling", "traveler", "travelling", "traveller", "jetset", "jet set"
   ];
   const cashbackWords = [
-    "cashback", "cash back", "cash-back", "cashback card", "2%", "1.5%", "flat rate",
-    "percent back", "money back", "rebate", "rebates", "cash rewards", "cash reward",
-    "no annual fee cashback", "everyday cashback", "simple cashback", "straight cash"
+    "cashback", "cash back", "cash-back", "cashback card",
+    "2%", "3%", "1.5%", "flat rate", "percent back", "reward rate", "earn rate",
+    "money back", "rebate", "rebates", "cash rewards", "cash reward",
+    "no annual fee cashback", "everyday cashback", "everyday spending",
+    "simple cashback", "straight cash",
+    // Dining & food
+    "dining", "restaurants", "restaurant", "food", "takeout", "delivery",
+    "uber eats", "doordash", "grubhub",
+    // Groceries
+    "groceries", "grocery", "groceries cash back", "grocery cash back",
+    "supermarket", "supermarkets", "costco", "walmart", "target", "wholesale club", "wholesale clubs",
+    // Gas & transit
+    "gas", "gas cash back", "fuel", "petrol", "ev charging", "charging",
+    "transit", "commuting", "rideshare", "uber", "lyft"
   ];
   const bonusWords = [
-    "bonus", "signup", "sign up", "sign-up", "sign up bonus", "welcome offer", "welcome bonus",
-    "sub", "intro offer", "introductory", "intro bonus", "new card bonus", "signup bonus",
-    "best bonus", "big bonus", "high bonus", "bonus offer", "offer", "promo"
+    "bonus", "bonus points",
+    "signup", "sign up", "sign-up", "sign up bonus", "signup bonus", "sign-up bonus",
+    "welcome offer", "welcome bonus", "intro bonus", "intro offer", "introductory",
+    "new card bonus", "sub",
+    "best bonus", "big bonus", "high bonus", "bonus offer", "offer", "promo",
+    "statement credit", "statement credits"
   ];
   const everydayWords = [
     "everyday", "every day", "daily", "general", "simple", "no category", "all-purpose",
@@ -82,9 +98,22 @@ export function promptToAnswers(prompt: string): PromptResult {
   }
 
   // ---- Annual fee ----
-  const noFeePhrases = [/no\s+annual\s+fee/, /no\s+fee\b/, /zero\s+fee/, /free\s+card/, /\bno\s+af\b/, /waived/];
-  const lowFeeWords = ["cheap", "budget", "low cost", "minimal fee", "affordable"];
-  const highFeeWords = ["premium", "luxury", "lounge", "don't care", "doesn't matter", "high fee", "ok with fee", "fine with fee", "any fee"];
+  const noFeePhrases = [
+    /no\s+annual\s+fee/,
+    /\$0\s+annual\s+fee/,
+    /0\s+annual\s+fee/,
+    /no\s+fee\b/,
+    /zero\s+fee/,
+    /free\s+card/,
+    /\bno\s+af\b/,
+    /waived/
+  ];
+  const lowFeeWords = ["cheap", "budget", "low cost", "minimal fee", "affordable", "low fee"];
+  const highFeeWords = [
+    "premium", "premium card", "luxury", "lounge",
+    "don't care", "doesn't matter", "high fee", "ok with fee", "fine with fee", "any fee",
+    "worth the fee"
+  ];
   const midFeeWords = ["mid", "medium", "moderate", "reasonable fee"];
 
   if (noFeePhrases.some(p => p.test(lower)) || lower.includes("zero fee") || lower.includes("free annual")) {
@@ -174,10 +203,32 @@ export function promptToAnswers(prompt: string): PromptResult {
     answers.travel_frequency = "Low";
   }
 
+  // ---- Foreign transaction fees / international use ----
+  if (/\bno\s+foreign\s+transaction\s+fee\b/.test(lower) ||
+      /\bno\s+foreign\s+fee\b/.test(lower) ||
+      /\bno\s+fx\s+fee\b/.test(lower) ||
+      /\bno\s+fx\b/.test(lower) ||
+      /\bforeign\s+transaction\s+fee\b/.test(lower) ||
+      /\bfx\s+fee\b/.test(lower) ||
+      /\binternational\s+fee\b/.test(lower) ||
+      /\boverseas\s+spending\b/.test(lower) ||
+      /\bglobal\s+acceptance\b/.test(lower)) {
+    // This key isn't yet used in scoring but is safe to add for future filters.
+    answers.needs_no_foreign_fee = "Yes";
+    matchedSomething = true;
+  }
+
   // ---- 0% / low APR ----
-  if (/\b(0%|zero)\s*apr\b/.test(lower) || /\bintro(ductory)?\s*apr\b/.test(lower) ||
-      /\bbalance\s*transfer\b/.test(lower) || /\bcarry\s*(a\s*)?balance\b/.test(lower) ||
-      /\blow\s*apr\b/.test(lower) || /\bno\s*interest\b/.test(lower) || /\bpay\s*over\s*time\b/.test(lower)) {
+  if (/\b(0%|zero)\s*apr\b/.test(lower) ||
+      /\bintro(ductory)?\s*apr\b/.test(lower) ||
+      /\bpromo(tional)?\s*apr\b/.test(lower) ||
+      /\bbalance\s*transfer\b/.test(lower) ||
+      /\bcarry\s*(a\s*)?balance\b/.test(lower) ||
+      /\blow\s*apr\b/.test(lower) ||
+      /\bno\s*interest\b/.test(lower) ||
+      /\binterest\s*free\b/.test(lower) ||
+      /\bdebt\b/.test(lower) ||
+      /\bpay\s*over\s*time\b/.test(lower)) {
     answers.needs_0_apr = "Yes";
     matchedSomething = true;
   }
