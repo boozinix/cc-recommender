@@ -4,6 +4,6 @@
 
 import * as cheerio from "cheerio";
 
-export function loadHtml(html: string): cheerio.CheerioAPI {
+export function loadHtml(html: string): ReturnType<typeof cheerio.load> {
   return cheerio.load(html);
 }
