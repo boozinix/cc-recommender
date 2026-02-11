@@ -82,18 +82,21 @@ export default function Home() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "center",
+        justifyContent: "flex-start",
         alignItems: "center",
         fontFamily: "system-ui",
         padding: 24,
+        paddingTop: 60,
         background: theme.backgroundGradient
       }}
     >
-      <CardScoutLogo
+      {/* Temporary: test CardScout_logo_light_transparent.svg — revert to <CardScoutLogo ... /> if you prefer the original SVG logo */}
+      <img
+        src="/CardScout_logo_light_transparent.svg"
+        alt="Card Scout"
         width={286}
         height={156}
-        mode="personal"
-        style={{ marginBottom: 20, flexShrink: 0 }}
+        style={{ marginBottom: 20, flexShrink: 0, objectFit: "contain" }}
       />
 
       <p style={{ marginBottom: 24, color: "var(--text-muted)", textAlign: "center", maxWidth: 420 }}>

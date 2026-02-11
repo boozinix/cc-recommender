@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CardScoutLogo } from "../components/CardScoutLogo";
 import { FAQButton } from "../components/FAQButton";
 import { useRouter } from "next/navigation";
 import { STORAGE_KEY } from "../lib/friends";
@@ -60,20 +59,22 @@ export default function LoginPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "center",
+        justifyContent: "flex-start",
         alignItems: "center",
         fontFamily: "system-ui",
         padding: 24,
+        paddingTop: 60,
         background: theme.backgroundGradient,
         color: "var(--foreground, #171717)",
       }}
     >
       <div style={{ marginBottom: 24 }}>
-        <CardScoutLogo
+        <img
+          src="/CardScout_logo_light_transparent.svg"
+          alt="Card Scout"
           width={286}
           height={156}
-          mode="personal"
-          style={{ flexShrink: 0 }}
+          style={{ flexShrink: 0, objectFit: "contain" }}
         />
       </div>
       <p style={{ color: "#64748b", marginBottom: 32, fontSize: 15, textAlign: "center" }}>

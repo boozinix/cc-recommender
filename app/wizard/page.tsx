@@ -229,17 +229,32 @@ export default function Wizard() {
     }
 
 
-    setAnswers(updatedAnswers);
+    // Clear refinement-only knobs when progressing the wizard so a fresh run
+    // doesn't accidentally inherit old travel filters from a previous session.
+    const {
+      exclude_travel_cards,
+      travel_rewards_type,
+      preferred_bank,
+      preferred_airline,
+      preferred_hotel,
+      travel_tier_preference,
+      travel_perks,
+      needs_0_apr,
+      issuer_approval_rules,
+      ...wizardOnlyAnswers
+    } = updatedAnswers as any;
+
+    setAnswers(wizardOnlyAnswers);
 
 
     if (step === questions.length - 1) {
-      localStorage.setItem("answers", JSON.stringify(updatedAnswers));
+      localStorage.setItem("answers", JSON.stringify(wizardOnlyAnswers));
       localStorage.setItem("wizard_step", step.toString());
       window.location.href = "/results";
     } else {
       const nextStep = step + 1;
       setStep(nextStep);
-      localStorage.setItem("answers", JSON.stringify(updatedAnswers));
+      localStorage.setItem("answers", JSON.stringify(wizardOnlyAnswers));
       localStorage.setItem("wizard_step", nextStep.toString());
     }
   }

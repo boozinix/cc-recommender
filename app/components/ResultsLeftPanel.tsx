@@ -286,28 +286,33 @@ export function ResultsLeftPanel({
                     );
                   })
                 ) : (
-                  q.options.map(option => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`tap-target results-refine-option-btn ${answers[q.id] === option.value ? "selected" : ""}`}
-                      onClick={() =>
-                        setAnswers(prev => ({ ...prev, [q.id]: option.value }))
-                      }
-                      style={{
-                        padding: "6px 14px",
-                        borderRadius: 8,
-                        border: `1px solid ${theme.primaryLighter}`,
-                        background:
-                          answers[q.id] === option.value ? theme.primary : "var(--surface-elevated)",
-                        color:
-                          answers[q.id] === option.value ? "#ffffff" : theme.primaryDark,
-                        fontSize: 13
-                      }}
-                    >
-                      {option.label}
-                    </button>
-                  ))
+                  q.options.map(option => {
+                    const rawValue = answers[q.id] as string | undefined;
+                    // For travel rewards type, default visual selection to "No Preference" when unset.
+                    const effectiveValue =
+                      q.id === "travel_rewards_type" && !rawValue ? "No Preference" : rawValue;
+                    const isSelected = effectiveValue === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`tap-target results-refine-option-btn ${isSelected ? "selected" : ""}`}
+                        onClick={() =>
+                          setAnswers(prev => ({ ...prev, [q.id]: option.value }))
+                        }
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: 8,
+                          border: `1px solid ${theme.primaryLighter}`,
+                          background: isSelected ? theme.primary : "var(--surface-elevated)",
+                          color: isSelected ? "#ffffff" : theme.primaryDark,
+                          fontSize: 13
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </div>

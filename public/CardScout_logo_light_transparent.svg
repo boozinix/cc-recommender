@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="300" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#dbeafe"/>
+    </filter>
+  </defs>
+
+  <!-- Bottom Card -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="120" rx="20" ry="20" width="220" height="140" fill="#1E3A8A"/>
+    <rect x="95" y="155" width="40" height="30" rx="6" fill="#FFFFFF"/>
+    <rect x="95" y="205" width="60" height="10" rx="4" fill="#FFFFFF"/>
+    <rect x="165" y="205" width="40" height="10" rx="4" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Top Card -->
+  <g transform="rotate(-18 180 120)" filter="url(#shadow)">
+    <rect x="110" y="40" rx="20" ry="20" width="220" height="130" fill="#55AFAD"/>
+    <rect x="110" y="80" width="220" height="25" fill="#1E3A8A"/>
+  </g>
+
+  <!-- Text -->
+  <text x="340" y="150"
+        font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="120"
+        font-weight="700"
+        fill="#1E3A8A">Card</text>
+
+  <text x="340" y="250"
+        font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="120"
+        font-weight="700"
+        fill="#55AFAD">Scout</text>
+
+</svg>
